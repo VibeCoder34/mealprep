@@ -1,11 +1,8 @@
 import 'app_localizations.dart';
-import '../mock_data.dart';
 
 extension MealPrepL10nX on AppLocalizations {
-  /// Localized display name for a [recipeId], or falls back to [MockData] / id.
+  /// Localized display name for a [recipeId], or falls back to id.
   String recipeNameById(String id) {
-    final r = MockData.recipeById(id);
-    if (r != null) return r.name;
     switch (id) {
       case 'r1':
         return recipeR1Name;
@@ -23,10 +20,6 @@ extension MealPrepL10nX on AppLocalizations {
   }
 
   String recipeStepLine(String recipeId, int index) {
-    final r = MockData.recipeById(recipeId);
-    if (r != null && index >= 0 && index < r.steps.length) {
-      return r.steps[index];
-    }
     switch (recipeId) {
       case 'r1':
         switch (index) {

@@ -12,7 +12,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get appTitle => 'Meal Prep';
 
   @override
-  String get navPantry => 'Envanter';
+  String get navPantry => 'Bozdolabım';
 
   @override
   String get navRecipes => 'Tarifler';
@@ -344,6 +344,16 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get emptyListDetailBody =>
       'Tariften eksik malzeme ekleyebilir veya başka bir listeyi kullanabilirsin.';
+
+  @override
+  String get shoppingListNotFoundTitle => 'Alışveriş listesi bulunamadı';
+
+  @override
+  String get shoppingListNotFoundBody =>
+      'Bu liste silinmiş olabilir ya da artık erişilemiyor.';
+
+  @override
+  String get goBack => 'Geri dön';
 
   @override
   String get cancel => 'İptal';

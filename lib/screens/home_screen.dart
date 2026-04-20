@@ -13,16 +13,15 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
     return ListenableBuilder(
       listenable: appState,
       builder: (context, _) {
         final inventory = appState.inventory;
         return Scaffold(
-          backgroundColor: const Color(0xFFF5F7FA),
           body: CustomScrollView(
             slivers: [
               SliverAppBar(
-                backgroundColor: Colors.white,
                 floating: true,
                 snap: true,
                 elevation: 0,
@@ -34,28 +33,22 @@ class HomeScreen extends StatelessWidget {
                     const SizedBox(width: 8),
                     Text(
                       l10n.myKitchen,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF1A1A2E),
-                        letterSpacing: -0.5,
-                      ),
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.5,
+                          ),
                     ),
                   ],
                 ),
                 actions: [
                   Container(
                     margin: const EdgeInsets.only(right: 16),
-                    child: const CircleAvatar(
+                    child: CircleAvatar(
                       radius: 18,
-                      backgroundColor: Color(0xFFE0F7FA),
-                      child: Text(
+                      backgroundColor: cs.primaryContainer,
+                      child: const Text(
                         'K',
-                        style: TextStyle(
-                          color: Color(0xFF00ACC1),
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14,
-                        ),
+                        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
                       ),
                     ),
                   ),
@@ -74,26 +67,24 @@ class HomeScreen extends StatelessWidget {
                     children: [
                       Text(
                         l10n.yourPantry,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF1A1A2E),
-                          letterSpacing: -0.3,
-                        ),
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.3,
+                            ),
                       ),
                       const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 9, vertical: 3),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFE0F7FA),
+                          color: cs.primaryContainer,
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
                           l10n.totalItemsCount(inventory.length),
-                          style: const TextStyle(
-                            color: Color(0xFF00838F),
-                            fontWeight: FontWeight.w600,
+                          style: TextStyle(
+                            color: cs.onPrimaryContainer,
+                            fontWeight: FontWeight.w700,
                             fontSize: 12,
                           ),
                         ),
@@ -254,6 +245,7 @@ class _InventoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
     final label = l10n.ingredientLabel(item.name);
     final unit = l10n.unitLabel(item.unit);
     return Dismissible(
@@ -286,9 +278,9 @@ class _InventoryCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: cs.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFF0F0F0)),
+          border: Border.all(color: cs.outlineVariant),
         ),
         child: Row(
           children: [
@@ -296,7 +288,7 @@ class _InventoryCard extends StatelessWidget {
               width: 50,
               height: 50,
               decoration: BoxDecoration(
-                color: const Color(0xFFF5F7FA),
+                color: cs.surfaceContainer,
                 borderRadius: BorderRadius.circular(13),
               ),
               child: Center(
@@ -310,20 +302,18 @@ class _InventoryCard extends StatelessWidget {
                 children: [
                   Text(
                     label,
-                    style: const TextStyle(
-                      fontSize: 15.5,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF1A1A2E),
-                      letterSpacing: -0.2,
-                    ),
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.2,
+                        ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     '${item.quantity} $unit',
-                    style: const TextStyle(
-                      fontSize: 13.5,
-                      color: Color(0xFF9E9E9E),
-                    ),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: cs.onSurfaceVariant,
+                          fontSize: 13.5,
+                        ),
                   ),
                 ],
               ),

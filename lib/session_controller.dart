@@ -1,31 +1,58 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:async';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'services/supabase_service.dart';
 
-/// Mock auth + onboarding flags (no backend).
+/// Supabase auth session + onboarding flags.
 class SessionController extends ChangeNotifier {
-  static const _kLoggedIn = 'session_is_logged_in';
   static const _kOnboarding = 'session_onboarding_done';
-  static const _kUserName = 'session_user_name';
-  static const _kUserEmail = 'session_user_email';
 
   bool _ready = false;
-  bool _isLoggedIn = false;
   bool _onboardingDone = false;
-  String _userName = '';
+  String? _userId;
   String _userEmail = '';
+  String _userName = '';
+  StreamSubscription<AuthState>? _authSub;
 
   bool get isReady => _ready;
-  bool get isLoggedIn => _isLoggedIn;
+  bool get isLoggedIn => _userId != null;
   bool get onboardingDone => _onboardingDone;
+  String? get userId => _userId;
   String get userName => _userName;
   String get userEmail => _userEmail;
 
   Future<void> load() async {
     final p = await SharedPreferences.getInstance();
-    _isLoggedIn = p.getBool(_kLoggedIn) ?? false;
     _onboardingDone = p.getBool(_kOnboarding) ?? false;
-    _userName = p.getString(_kUserName) ?? '';
-    _userEmail = p.getString(_kUserEmail) ?? '';
+
+    final session = SupabaseService.instance.currentSession;
+    final user = SupabaseService.instance.currentUser;
+    if (session != null && user != null) {
+      _userId = user.id;
+      _userEmail = user.email ?? '';
+      _userName = (user.userMetadata?['full_name'] as String?)?.trim() ?? '';
+    } else {
+      _userId = null;
+      _userEmail = '';
+      _userName = '';
+    }
+
+    _authSub?.cancel();
+    _authSub = SupabaseService.instance.onAuthStateChange.listen((state) {
+      final user = state.session?.user;
+      if (user == null) {
+        _userId = null;
+        _userEmail = '';
+        _userName = '';
+      } else {
+        _userId = user.id;
+        _userEmail = user.email ?? '';
+        _userName = (user.userMetadata?['full_name'] as String?)?.trim() ?? '';
+      }
+      notifyListeners();
+    });
+
     _ready = true;
     notifyListeners();
   }
@@ -37,30 +64,13 @@ class SessionController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Simulated sign-in / sign-up (1–2s delay for UX).
-  Future<void> authenticate({
-    required String email,
-    required String name,
-  }) async {
-    await Future<void>.delayed(const Duration(milliseconds: 1500));
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_kLoggedIn, true);
-    await prefs.setString(_kUserEmail, email.trim());
-    await prefs.setString(_kUserName, name.trim());
-    _isLoggedIn = true;
-    _userEmail = email.trim();
-    _userName = name.trim();
-    notifyListeners();
+  Future<void> logout() async {
+    await SupabaseService.instance.signOut();
   }
 
-  Future<void> logout() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_kLoggedIn, false);
-    await prefs.remove(_kUserName);
-    await prefs.remove(_kUserEmail);
-    _isLoggedIn = false;
-    _userName = '';
-    _userEmail = '';
-    notifyListeners();
+  @override
+  void dispose() {
+    _authSub?.cancel();
+    super.dispose();
   }
 }

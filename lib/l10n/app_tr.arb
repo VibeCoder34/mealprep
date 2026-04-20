@@ -1,7 +1,7 @@
 {
   "@@locale": "tr",
   "appTitle": "Meal Prep",
-  "navPantry": "Envanter",
+  "navPantry": "Bozdolabım",
   "navRecipes": "Tarifler",
   "navShopping": "Alışveriş",
   "navSettings": "Ayarlar",
@@ -101,6 +101,9 @@
   "shoppingListProgress": "{bought} / {total} tamam",
   "emptyListDetailTitle": "Henüz bir şey yok",
   "emptyListDetailBody": "Tariften eksik malzeme ekleyebilir veya başka bir listeyi kullanabilirsin.",
+  "shoppingListNotFoundTitle": "Alışveriş listesi bulunamadı",
+  "shoppingListNotFoundBody": "Bu liste silinmiş olabilir ya da artık erişilemiyor.",
+  "goBack": "Geri dön",
   "cancel": "İptal",
   "shareTooltip": "Paylaş",
   "listCopied": "Liste panoya kopyalandı!",

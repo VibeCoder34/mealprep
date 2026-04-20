@@ -42,77 +42,115 @@ class ShoppingListScreen extends StatelessWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
       ),
       builder: (ctx) {
-        return Padding(
-          padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            top: 16,
-            bottom: MediaQuery.viewInsetsOf(ctx).bottom + 24,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE0E0E0),
-                    borderRadius: BorderRadius.circular(2),
+        var submitting = false;
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            Future<void> submit() async {
+              if (submitting) return;
+              FocusScope.of(ctx).unfocus();
+              setModalState(() => submitting = true);
+
+              final nav = Navigator.of(context);
+              final id = await appState.createShoppingList(
+                name: nameCtrl.text,
+                description: descCtrl.text,
+              );
+              if (ctx.mounted) Navigator.of(ctx).pop();
+
+              // Ensure the bottom sheet fully dismisses before pushing, and avoid hero conflicts.
+              await Future<void>.delayed(Duration.zero);
+              nav.push<void>(
+                MaterialPageRoute(
+                  builder: (_) => ShoppingListDetailScreen(
+                    listId: id,
+                    appState: appState,
+                    onGoToRecipes: onGoToRecipes,
                   ),
                 ),
-              ),
-              Text(
-                l10n.newShoppingList,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF1A1A2E),
+              );
+            }
+
+            return SafeArea(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.only(
+                  left: 20,
+                  right: 20,
+                  top: 16,
+                  bottom: MediaQuery.viewInsetsOf(ctx).bottom + 24,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 36,
+                        height: 4,
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE0E0E0),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    Text(
+                      l10n.newShoppingList,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF1A1A2E),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: nameCtrl,
+                      autofocus: true,
+                      decoration: InputDecoration(
+                        labelText: l10n.shoppingListNameLabel,
+                        hintText: l10n.shoppingListNameHint,
+                        border:
+                            OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      textInputAction: TextInputAction.next,
+                      onSubmitted: (_) => submit(),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: descCtrl,
+                      decoration: InputDecoration(
+                        labelText: l10n.shoppingListDescriptionLabel,
+                        hintText: l10n.shoppingListDescriptionHint,
+                        alignLabelWithHint: true,
+                        border:
+                            OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      minLines: 2,
+                      maxLines: 4,
+                      textInputAction: TextInputAction.done,
+                      onSubmitted: (_) => submit(),
+                    ),
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: submitting ? null : submit,
+                      child: submitting
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(strokeWidth: 2.4),
+                            )
+                          : Text(l10n.createShoppingList),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: nameCtrl,
-                autofocus: true,
-                decoration: InputDecoration(
-                  labelText: l10n.shoppingListNameLabel,
-                  hintText: l10n.shoppingListNameHint,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-                ),
-                textInputAction: TextInputAction.next,
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: descCtrl,
-                decoration: InputDecoration(
-                  labelText: l10n.shoppingListDescriptionLabel,
-                  hintText: l10n.shoppingListDescriptionHint,
-                  alignLabelWithHint: true,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-                ),
-                minLines: 2,
-                maxLines: 4,
-                textInputAction: TextInputAction.done,
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () {
-                  final id = appState.createShoppingList(
-                    name: nameCtrl.text,
-                    description: descCtrl.text,
-                  );
-                  Navigator.pop(ctx);
-                  _openDetail(context, id);
-                },
-                child: Text(l10n.createShoppingList),
-              ),
-            ],
-          ),
+            );
+          },
         );
       },
-    );
+    ).whenComplete(() {
+      nameCtrl.dispose();
+      descCtrl.dispose();
+    });
   }
 
   String _formatShoppingListMarkdown(
@@ -161,20 +199,16 @@ class ShoppingListScreen extends StatelessWidget {
         final lists = appState.shoppingLists;
 
         return Scaffold(
-          backgroundColor: const Color(0xFFF5F7FA),
           appBar: AppBar(
-            backgroundColor: Colors.white,
             elevation: 0,
             scrolledUnderElevation: 1,
             surfaceTintColor: Colors.transparent,
             title: Text(
               l10n.shoppingListsTitle,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF1A1A2E),
-                letterSpacing: -0.5,
-              ),
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.5,
+                  ),
             ),
             actions: [
               if (lists.isNotEmpty)
@@ -213,6 +247,7 @@ class ShoppingListScreen extends StatelessWidget {
           floatingActionButton: lists.isEmpty
               ? null
               : FloatingActionButton.extended(
+                  heroTag: 'shopping_hub_fab',
                   onPressed: () => _showCreateListSheet(context),
                   backgroundColor: const Color(0xFF00ACC1),
                   foregroundColor: Colors.white,

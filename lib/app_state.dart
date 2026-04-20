@@ -1,17 +1,27 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import 'models/inventory_item.dart';
+import 'models/recipe.dart';
 import 'models/recipe_user_rating.dart';
 import 'models/shopping_item.dart';
 import 'models/shopping_list_bundle.dart';
-import 'mock_data.dart';
+import 'services/database_service.dart';
+import 'services/supabase_service.dart';
 
 class AppState extends ChangeNotifier {
   static const _dietPrefsKey = 'dietary_preference_keys_v2';
   static const _premiumKey = 'mock_is_premium';
-  final List<InventoryItem> _inventory = List.from(MockData.initialInventory);
-  final List<ShoppingListBundle> _shoppingLists =
-      List.from(MockData.initialShoppingLists);
+  static const _inventoryKey = 'app_inventory_v1';
+  static const _shoppingListsKey = 'app_shopping_lists_v1';
+  static const _preferredShoppingListIdKey = 'app_preferred_shopping_list_id_v1';
+  static const _savedRecipeIdsKey = 'app_saved_recipe_ids_v1';
+  static const _recipeRatingsKey = 'app_recipe_ratings_v1';
+  static const _recipesKey = 'app_recipes_cache_v1';
+
+  final List<InventoryItem> _inventory = [];
+  final List<ShoppingListBundle> _shoppingLists = [];
+  final List<Recipe> _recipes = [];
   final List<String> _savedRecipeIds = [];
   final Map<String, RecipeUserRating> _recipeRatings = {};
   List<String> _dietaryPreferences = const [];
@@ -19,15 +29,15 @@ class AppState extends ChangeNotifier {
   bool _isPremium = false;
 
   AppState() {
-    if (_shoppingLists.isNotEmpty) {
-      _preferredShoppingListId = _shoppingLists.first.id;
-    }
+    _loadCoreData();
     _loadDietaryPreferences();
     _loadPremium();
+    _loadFromBackendIfLoggedIn();
   }
 
   List<InventoryItem> get inventory => List.unmodifiable(_inventory);
   List<ShoppingListBundle> get shoppingLists => List.unmodifiable(_shoppingLists);
+  List<Recipe> get recipes => List.unmodifiable(_recipes);
 
   ShoppingListBundle? shoppingListById(String id) {
     try {
@@ -82,11 +92,20 @@ class AppState extends ChangeNotifier {
 
   bool isRecipeSaved(String recipeId) => _savedRecipeIds.contains(recipeId);
 
+  String? get _userId => SupabaseService.instance.currentUser?.id;
+
   /// Returns `true` if toggle succeeded, `false` if blocked (free limit).
-  bool toggleSavedRecipe(String recipeId) {
+  Future<bool> toggleSavedRecipe(String recipeId) async {
     if (_savedRecipeIds.contains(recipeId)) {
       _savedRecipeIds.remove(recipeId);
       notifyListeners();
+      _persistSavedRecipes();
+      final uid = _userId;
+      if (uid != null) {
+        try {
+          await DatabaseService.instance.unsaveRecipe(userId: uid, recipeId: recipeId);
+        } catch (_) {}
+      }
       return true;
     }
     if (!_isPremium && _savedRecipeIds.length >= 3) {
@@ -94,23 +113,49 @@ class AppState extends ChangeNotifier {
     }
     _savedRecipeIds.add(recipeId);
     notifyListeners();
+    _persistSavedRecipes();
+    final uid = _userId;
+    if (uid != null) {
+      try {
+        await DatabaseService.instance.saveRecipe(userId: uid, recipeId: recipeId);
+      } catch (_) {}
+    }
     return true;
   }
 
   RecipeUserRating? ratingForRecipe(String recipeId) => _recipeRatings[recipeId];
 
-  void setRecipeRating(String recipeId, {required int rating, String comment = ''}) {
+  Future<void> setRecipeRating(String recipeId, {required int rating, String comment = ''}) async {
     final r = rating.clamp(1, 5);
     _recipeRatings[recipeId] = RecipeUserRating(
       rating: r,
       comment: comment.trim(),
     );
     notifyListeners();
+    _persistRecipeRatings();
+    final uid = _userId;
+    if (uid != null) {
+      try {
+        await DatabaseService.instance.upsertRecipeRating(
+          userId: uid,
+          recipeId: recipeId,
+          rating: r,
+          comment: comment.trim(),
+        );
+      } catch (_) {}
+    }
   }
 
-  void removeRecipeRating(String recipeId) {
+  Future<void> removeRecipeRating(String recipeId) async {
     if (_recipeRatings.remove(recipeId) != null) {
       notifyListeners();
+      _persistRecipeRatings();
+      final uid = _userId;
+      if (uid != null) {
+        try {
+          await DatabaseService.instance.deleteRecipeRating(userId: uid, recipeId: recipeId);
+        } catch (_) {}
+      }
     }
   }
 
@@ -118,29 +163,59 @@ class AppState extends ChangeNotifier {
     if (_shoppingLists.any((l) => l.id == id)) {
       _preferredShoppingListId = id;
       notifyListeners();
+      _persistPreferredShoppingListId();
     }
   }
 
-  void addItem(InventoryItem item) {
-    final idx = _inventory.indexWhere(
-      (i) => i.name.toLowerCase() == item.name.toLowerCase(),
-    );
-    if (idx >= 0) {
-      _inventory[idx] = _inventory[idx].copyWith(
-        quantity: _inventory[idx].quantity + item.quantity,
-      );
-    } else {
+  Future<void> addItem(InventoryItem item) async {
+    final uid = _userId;
+    if (uid == null) {
+      // Fallback to local-only if not logged in.
       _inventory.add(item);
+      notifyListeners();
+      _persistInventory();
+      return;
     }
-    notifyListeners();
+
+    try {
+      final inserted = await DatabaseService.instance.addInventoryItem(
+        userId: uid,
+        itemName: item.name,
+        emoji: item.emoji,
+        quantity: item.quantity,
+        unit: item.unit,
+      );
+      final serverItem = InventoryItem(
+        id: inserted['id']?.toString() ?? item.id,
+        name: inserted['item_name']?.toString() ?? item.name,
+        emoji: inserted['emoji']?.toString() ?? item.emoji,
+        quantity: (inserted['quantity'] as num?)?.toInt() ?? item.quantity,
+        unit: inserted['unit']?.toString() ?? item.unit,
+      );
+      _inventory.insert(0, serverItem);
+      notifyListeners();
+      _persistInventory();
+    } catch (_) {
+      // If backend fails, keep local item.
+      _inventory.insert(0, item);
+      notifyListeners();
+      _persistInventory();
+    }
   }
 
-  void removeItem(String id) {
+  Future<void> removeItem(String id) async {
     _inventory.removeWhere((i) => i.id == id);
     notifyListeners();
+    _persistInventory();
+    final uid = _userId;
+    if (uid != null) {
+      try {
+        await DatabaseService.instance.deleteInventoryItem(id: id, userId: uid);
+      } catch (_) {}
+    }
   }
 
-  void toggleShoppingItem(String listId, String itemId) {
+  Future<void> toggleShoppingItem(String listId, String itemId) async {
     final lidx = _shoppingLists.indexWhere((l) => l.id == listId);
     if (lidx < 0) return;
     final list = _shoppingLists[lidx];
@@ -152,82 +227,187 @@ class AppState extends ChangeNotifier {
     }).toList();
     _shoppingLists[lidx] = list.copyWith(items: items);
     notifyListeners();
+    _persistShoppingLists();
+
+    ShoppingItem? updated;
+    for (final it in items) {
+      if (it.id == itemId) {
+        updated = it;
+        break;
+      }
+    }
+    if (updated != null && updated.id.isNotEmpty) {
+      try {
+        await DatabaseService.instance.setShoppingListPurchased(
+          itemId: updated.id,
+          isPurchased: updated.isBought,
+        );
+      } catch (_) {}
+    }
   }
 
   /// Manual entry: always appends (same name can appear with different amounts).
-  void addManualShoppingItem(String listId, ShoppingItem item) {
+  Future<void> addManualShoppingItem(String listId, ShoppingItem item) async {
     final lidx = _shoppingLists.indexWhere((l) => l.id == listId);
     if (lidx < 0) return;
     final list = _shoppingLists[lidx];
-    final next = List<ShoppingItem>.from(list.items)..add(item);
-    _shoppingLists[lidx] = list.copyWith(items: next);
-    _preferredShoppingListId = listId;
-    notifyListeners();
+    try {
+      final inserted = await DatabaseService.instance.addShoppingListItem(
+        listId: listId,
+        itemName: item.name,
+        amount: item.amount,
+        isPurchased: false,
+        source: 'manual',
+        recipeId: null,
+      );
+      final serverItem = ShoppingItem(
+        id: inserted['id']?.toString() ?? item.id,
+        name: inserted['item_name']?.toString() ?? item.name,
+        amount: inserted['amount']?.toString() ?? item.amount,
+        recipeId: inserted['recipe_id']?.toString() ?? 'manual',
+        isBought: (inserted['is_purchased'] as bool?) ?? false,
+      );
+      final next = List<ShoppingItem>.from(list.items)..add(serverItem);
+      _shoppingLists[lidx] = list.copyWith(items: next);
+      _preferredShoppingListId = listId;
+      notifyListeners();
+      _persistShoppingLists();
+      _persistPreferredShoppingListId();
+    } catch (_) {
+      final next = List<ShoppingItem>.from(list.items)..add(item);
+      _shoppingLists[lidx] = list.copyWith(items: next);
+      _preferredShoppingListId = listId;
+      notifyListeners();
+      _persistShoppingLists();
+      _persistPreferredShoppingListId();
+    }
   }
 
-  void removeShoppingItem(String listId, String itemId) {
+  Future<void> removeShoppingItem(String listId, String itemId) async {
     final lidx = _shoppingLists.indexWhere((l) => l.id == listId);
     if (lidx < 0) return;
     final list = _shoppingLists[lidx];
     final next = list.items.where((i) => i.id != itemId).toList();
     _shoppingLists[lidx] = list.copyWith(items: next);
     notifyListeners();
+    _persistShoppingLists();
+    try {
+      await DatabaseService.instance.deleteShoppingListItem(itemId: itemId);
+    } catch (_) {}
   }
 
-  void addShoppingItems(String listId, List<ShoppingItem> items) {
+  Future<void> addShoppingItems(String listId, List<ShoppingItem> items) async {
     final lidx = _shoppingLists.indexWhere((l) => l.id == listId);
     if (lidx < 0) return;
     final list = _shoppingLists[lidx];
     final next = List<ShoppingItem>.from(list.items);
     for (final item in items) {
       final exists = next.any(
-        (i) =>
-            i.name.toLowerCase() == item.name.toLowerCase() &&
-            i.recipeId == item.recipeId,
+        (i) => i.name.toLowerCase() == item.name.toLowerCase() && i.recipeId == item.recipeId,
       );
-      if (!exists) {
+      if (exists) continue;
+      try {
+        final inserted = await DatabaseService.instance.addShoppingListItem(
+          listId: listId,
+          itemName: item.name,
+          amount: item.amount,
+          isPurchased: item.isBought,
+          source: 'recipe',
+          recipeId: item.recipeId,
+        );
+        next.add(
+          ShoppingItem(
+            id: inserted['id']?.toString() ?? item.id,
+            name: inserted['item_name']?.toString() ?? item.name,
+            amount: inserted['amount']?.toString() ?? item.amount,
+            recipeId: inserted['recipe_id']?.toString() ?? item.recipeId,
+            isBought: (inserted['is_purchased'] as bool?) ?? item.isBought,
+          ),
+        );
+      } catch (_) {
         next.add(item);
       }
     }
     _shoppingLists[lidx] = list.copyWith(items: next);
     _preferredShoppingListId = listId;
     notifyListeners();
+    _persistShoppingLists();
+    _persistPreferredShoppingListId();
   }
 
-  String createShoppingList({
+  Future<String> createShoppingList({
     required String name,
     String description = '',
   }) {
-    final id = 'sl_${DateTime.now().millisecondsSinceEpoch}';
-    _shoppingLists.add(
-      ShoppingListBundle(
-        id: id,
-        name: name.trim().isEmpty ? '—' : name.trim(),
-        description: description.trim(),
-      ),
-    );
-    _preferredShoppingListId = id;
-    notifyListeners();
-    return id;
+    final uid = _userId;
+    final safeName = name.trim().isEmpty ? '—' : name.trim();
+    final safeDesc = description.trim();
+
+    if (uid == null) {
+      final id = 'sl_${DateTime.now().millisecondsSinceEpoch}';
+      _shoppingLists.add(
+        ShoppingListBundle(id: id, name: safeName, description: safeDesc),
+      );
+      _preferredShoppingListId = id;
+      notifyListeners();
+      _persistShoppingLists();
+      _persistPreferredShoppingListId();
+      return Future.value(id);
+    }
+
+    return DatabaseService.instance
+        .createShoppingList(userId: uid, name: safeName, description: safeDesc)
+        .then((row) {
+      final id = row['id']?.toString() ?? 'sl_${DateTime.now().millisecondsSinceEpoch}';
+      _shoppingLists.insert(
+        0,
+        ShoppingListBundle(id: id, name: row['name']?.toString() ?? safeName, description: row['description']?.toString() ?? safeDesc),
+      );
+      _preferredShoppingListId = id;
+      notifyListeners();
+      _persistShoppingLists();
+      _persistPreferredShoppingListId();
+      return id;
+    }).catchError((_) {
+      final id = 'sl_${DateTime.now().millisecondsSinceEpoch}';
+      _shoppingLists.insert(0, ShoppingListBundle(id: id, name: safeName, description: safeDesc));
+      _preferredShoppingListId = id;
+      notifyListeners();
+      _persistShoppingLists();
+      _persistPreferredShoppingListId();
+      return id;
+    });
   }
 
-  void updateShoppingListMeta(
+  Future<void> updateShoppingListMeta(
     String id, {
     required String name,
     required String description,
   }) {
     final lidx = _shoppingLists.indexWhere((l) => l.id == id);
-    if (lidx < 0) return;
+    if (lidx < 0) return Future.value();
     final list = _shoppingLists[lidx];
     _shoppingLists[lidx] = list.copyWith(
       name: name.trim().isEmpty ? list.name : name.trim(),
       description: description.trim(),
     );
     notifyListeners();
+    _persistShoppingLists();
+
+    final uid = _userId;
+    if (uid != null) {
+      return DatabaseService.instance.updateShoppingListMeta(
+        id: id,
+        userId: uid,
+        name: _shoppingLists[lidx].name,
+        description: _shoppingLists[lidx].description,
+      );
+    }
+    return Future.value();
   }
 
   /// Returns `false` if this was the last list (it is kept).
-  bool deleteShoppingList(String id) {
+  Future<bool> deleteShoppingList(String id) async {
     if (_shoppingLists.length <= 1) return false;
     final removedPreferred = _preferredShoppingListId == id;
     _shoppingLists.removeWhere((l) => l.id == id);
@@ -235,6 +415,14 @@ class AppState extends ChangeNotifier {
       _preferredShoppingListId = _shoppingLists.first.id;
     }
     notifyListeners();
+    _persistShoppingLists();
+    _persistPreferredShoppingListId();
+    final uid = _userId;
+    if (uid != null) {
+      try {
+        await DatabaseService.instance.deleteShoppingList(id: id, userId: uid);
+      } catch (_) {}
+    }
     return true;
   }
 
@@ -249,5 +437,239 @@ class AppState extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_premiumKey, true);
+  }
+
+  Future<void> _loadCoreData() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final invRaw = prefs.getString(_inventoryKey);
+    if (invRaw != null && invRaw.trim().isNotEmpty) {
+      try {
+        final decoded = jsonDecode(invRaw);
+        if (decoded is List) {
+          _inventory
+            ..clear()
+            ..addAll(
+              decoded
+                  .whereType<Map>()
+                  .map((m) => Map<String, Object?>.from(m))
+                  .map(InventoryItem.fromJson),
+            );
+        }
+      } catch (_) {}
+    }
+
+    final listsRaw = prefs.getString(_shoppingListsKey);
+    if (listsRaw != null && listsRaw.trim().isNotEmpty) {
+      try {
+        final decoded = jsonDecode(listsRaw);
+        if (decoded is List) {
+          _shoppingLists
+            ..clear()
+            ..addAll(
+              decoded
+                  .whereType<Map>()
+                  .map((m) => Map<String, Object?>.from(m))
+                  .map(ShoppingListBundle.fromJson),
+            );
+        }
+      } catch (_) {}
+    }
+
+    if (_shoppingLists.isNotEmpty) {
+      final preferred = prefs.getString(_preferredShoppingListIdKey);
+      if (preferred != null && _shoppingLists.any((l) => l.id == preferred)) {
+        _preferredShoppingListId = preferred;
+      } else {
+        _preferredShoppingListId ??= _shoppingLists.first.id;
+      }
+    } else {
+      _preferredShoppingListId = null;
+    }
+
+    final savedIds = prefs.getStringList(_savedRecipeIdsKey);
+    if (savedIds != null) {
+      _savedRecipeIds
+        ..clear()
+        ..addAll(savedIds);
+    }
+
+    final ratingsRaw = prefs.getString(_recipeRatingsKey);
+    if (ratingsRaw != null && ratingsRaw.trim().isNotEmpty) {
+      try {
+        final decoded = jsonDecode(ratingsRaw);
+        if (decoded is Map) {
+          _recipeRatings
+            ..clear()
+            ..addAll(
+              decoded.map(
+                (k, v) => MapEntry(
+                  k.toString(),
+                  RecipeUserRating.fromJson(Map<String, Object?>.from(v as Map)),
+                ),
+              ),
+            );
+        }
+      } catch (_) {}
+    }
+
+    final recipesRaw = prefs.getString(_recipesKey);
+    if (recipesRaw != null && recipesRaw.trim().isNotEmpty) {
+      try {
+        final decoded = jsonDecode(recipesRaw);
+        if (decoded is List) {
+          _recipes
+            ..clear()
+            ..addAll(
+              decoded
+                  .whereType<Map>()
+                  .map((m) => Map<String, Object?>.from(m))
+                  .map(Recipe.fromJson),
+            );
+        }
+      } catch (_) {}
+    }
+
+    notifyListeners();
+  }
+
+  Future<void> _loadFromBackendIfLoggedIn() async {
+    final uid = _userId;
+    if (uid == null) return;
+
+    try {
+      // Recipes (shared)
+      final recipeRows = await DatabaseService.instance.fetchRecipes();
+      _recipes
+        ..clear()
+        ..addAll(recipeRows.map((m) => Recipe.fromJson(m)));
+      _persistRecipesCache();
+    } catch (_) {}
+
+    try {
+      // Inventory
+      final inv = await DatabaseService.instance.fetchInventory(userId: uid);
+      _inventory
+        ..clear()
+        ..addAll(
+          inv.map(
+            (r) => InventoryItem(
+              id: r['id']?.toString() ?? '',
+              name: r['item_name']?.toString() ?? '',
+              emoji: r['emoji']?.toString() ?? '🍽️',
+              quantity: (r['quantity'] as num?)?.toInt() ?? 0,
+              unit: r['unit']?.toString() ?? 'pcs',
+            ),
+          ),
+        );
+      _persistInventory();
+    } catch (_) {}
+
+    try {
+      // Shopping lists + items
+      final listRows = await DatabaseService.instance.fetchShoppingLists(userId: uid);
+      final bundles = <ShoppingListBundle>[];
+      for (final l in listRows) {
+        final listId = l['id']?.toString() ?? '';
+        final itemsRows = listId.isEmpty
+            ? <Map<String, dynamic>>[]
+            : await DatabaseService.instance.fetchShoppingListItems(listId: listId);
+        final items = itemsRows
+            .map(
+              (r) => ShoppingItem(
+                id: r['id']?.toString() ?? '',
+                name: r['item_name']?.toString() ?? '',
+                amount: r['amount']?.toString() ?? '',
+                recipeId: r['recipe_id']?.toString() ?? (r['source']?.toString() == 'manual' ? 'manual' : 'general'),
+                isBought: (r['is_purchased'] as bool?) ?? false,
+              ),
+            )
+            .toList(growable: false);
+        bundles.add(
+          ShoppingListBundle(
+            id: listId,
+            name: l['name']?.toString() ?? '—',
+            description: l['description']?.toString() ?? '',
+            items: items,
+          ),
+        );
+      }
+      _shoppingLists
+        ..clear()
+        ..addAll(bundles);
+      if (_shoppingLists.isNotEmpty) {
+        _preferredShoppingListId ??= _shoppingLists.first.id;
+      }
+      _persistShoppingLists();
+      _persistPreferredShoppingListId();
+    } catch (_) {}
+
+    try {
+      // Saved recipes
+      final rows = await DatabaseService.instance.fetchSavedRecipes(userId: uid);
+      _savedRecipeIds
+        ..clear()
+        ..addAll(rows.map((r) => r['recipe_id']?.toString() ?? '').where((s) => s.isNotEmpty));
+      _persistSavedRecipes();
+    } catch (_) {}
+
+    try {
+      // Ratings
+      final rows = await DatabaseService.instance.fetchRecipeRatings(userId: uid);
+      _recipeRatings
+        ..clear()
+        ..addEntries(
+          rows.map((r) {
+            final id = r['recipe_id']?.toString() ?? '';
+            final rating = (r['rating'] as num?)?.toInt() ?? 0;
+            final comment = r['comment']?.toString() ?? '';
+            return MapEntry(id, RecipeUserRating(rating: rating, comment: comment));
+          }).where((e) => e.key.isNotEmpty && e.value.rating > 0),
+        );
+      _persistRecipeRatings();
+    } catch (_) {}
+
+    notifyListeners();
+  }
+
+  Future<void> _persistRecipesCache() async {
+    final prefs = await SharedPreferences.getInstance();
+    final encoded = jsonEncode(_recipes.map((r) => r.toJson()).toList(growable: false));
+    await prefs.setString(_recipesKey, encoded);
+  }
+
+  Future<void> _persistInventory() async {
+    final prefs = await SharedPreferences.getInstance();
+    final encoded = jsonEncode(_inventory.map((i) => i.toJson()).toList(growable: false));
+    await prefs.setString(_inventoryKey, encoded);
+  }
+
+  Future<void> _persistShoppingLists() async {
+    final prefs = await SharedPreferences.getInstance();
+    final encoded = jsonEncode(_shoppingLists.map((l) => l.toJson()).toList(growable: false));
+    await prefs.setString(_shoppingListsKey, encoded);
+  }
+
+  Future<void> _persistPreferredShoppingListId() async {
+    final prefs = await SharedPreferences.getInstance();
+    final id = _preferredShoppingListId;
+    if (id == null) {
+      await prefs.remove(_preferredShoppingListIdKey);
+    } else {
+      await prefs.setString(_preferredShoppingListIdKey, id);
+    }
+  }
+
+  Future<void> _persistSavedRecipes() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_savedRecipeIdsKey, List<String>.from(_savedRecipeIds));
+  }
+
+  Future<void> _persistRecipeRatings() async {
+    final prefs = await SharedPreferences.getInstance();
+    final encoded = jsonEncode(
+      _recipeRatings.map((k, v) => MapEntry(k, v.toJson())),
+    );
+    await prefs.setString(_recipeRatingsKey, encoded);
   }
 }

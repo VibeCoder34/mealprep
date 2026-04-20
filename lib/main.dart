@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app_state.dart';
 import 'locale_controller.dart';
 import 'l10n/app_localizations.dart';
@@ -10,8 +12,16 @@ import 'screens/recipe_screen.dart';
 import 'screens/shopping_list_screen.dart';
 import 'screens/settings_screen.dart';
 import 'session_controller.dart';
+import 'settings_controller.dart';
+import 'theme/app_theme.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: '.env');
+  await Supabase.initialize(
+    url: dotenv.env['SUPABASE_URL'] ?? '',
+    anonKey: dotenv.env['SUPABASE_ANON_KEY'] ?? '',
+  );
   runApp(const MealPrepApp());
 }
 
@@ -25,6 +35,7 @@ class MealPrepApp extends StatefulWidget {
 class _MealPrepAppState extends State<MealPrepApp> {
   final LocaleController _localeController = LocaleController();
   final SessionController _session = SessionController();
+  final SettingsController _settings = SettingsController();
 
   @override
   void initState() {
@@ -39,77 +50,36 @@ class _MealPrepAppState extends State<MealPrepApp> {
     return ListenableBuilder(
       listenable: _localeController,
       builder: (context, _) {
-        return MaterialApp(
-          onGenerateTitle: (context) =>
-              AppLocalizations.of(context)!.appTitle,
-          debugShowCheckedModeBanner: false,
-          locale: _localeController.locale,
-          localizationsDelegates: const [
-            AppLocalizations.delegate,
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          supportedLocales: AppLocalizations.supportedLocales,
-          theme: _buildTheme(),
-          home: AppRoot(
-            localeController: _localeController,
-            session: _session,
-          ),
+        return ListenableBuilder(
+          listenable: _settings,
+          builder: (context, _) {
+            return MaterialApp(
+              onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,
+              debugShowCheckedModeBanner: false,
+              locale: _localeController.locale,
+              localizationsDelegates: const [
+                AppLocalizations.delegate,
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              supportedLocales: AppLocalizations.supportedLocales,
+              theme: AppTheme.light(),
+              darkTheme: AppTheme.dark(),
+              themeMode: _settings.themeMode,
+              home: AppRoot(
+                localeController: _localeController,
+                session: _session,
+                settings: _settings,
+              ),
+            );
+          },
         );
       },
     );
   }
 
-  ThemeData _buildTheme() {
-    const primaryColor = Color(0xFF00ACC1);
-    return ThemeData(
-      useMaterial3: true,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: primaryColor,
-        brightness: Brightness.light,
-        primary: primaryColor,
-      ),
-      scaffoldBackgroundColor: const Color(0xFFF5F7FA),
-      appBarTheme: const AppBarTheme(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        scrolledUnderElevation: 1,
-        surfaceTintColor: Colors.transparent,
-        centerTitle: false,
-        iconTheme: IconThemeData(color: Color(0xFF1A1A2E)),
-        titleTextStyle: TextStyle(
-          color: Color(0xFF1A1A2E),
-          fontSize: 20,
-          fontWeight: FontWeight.w700,
-          letterSpacing: -0.4,
-        ),
-      ),
-      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-        backgroundColor: Colors.white,
-        selectedItemColor: primaryColor,
-        unselectedItemColor: Color(0xFFBDBDBD),
-        type: BottomNavigationBarType.fixed,
-        elevation: 0,
-        selectedLabelStyle: TextStyle(fontWeight: FontWeight.w600, fontSize: 11),
-        unselectedLabelStyle: TextStyle(fontWeight: FontWeight.w500, fontSize: 11),
-      ),
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: primaryColor,
-          foregroundColor: Colors.white,
-          elevation: 0,
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          textStyle: const TextStyle(
-            fontSize: 15.5,
-            fontWeight: FontWeight.w600,
-            letterSpacing: -0.2,
-          ),
-        ),
-      ),
-    );
-  }
+  // Theme lives in `lib/theme/app_theme.dart`.
 }
 
 // ─── Auth + onboarding gate ─────────────────────────────────────────────────
@@ -117,11 +87,13 @@ class _MealPrepAppState extends State<MealPrepApp> {
 class AppRoot extends StatefulWidget {
   final LocaleController localeController;
   final SessionController session;
+  final SettingsController settings;
 
   const AppRoot({
     super.key,
     required this.localeController,
     required this.session,
+    required this.settings,
   });
 
   @override
@@ -142,11 +114,7 @@ class _AppRootState extends State<AppRoot> {
         }
 
         if (!s.isLoggedIn) {
-          return AuthScreen(
-            onAuthenticated: ({required email, required name}) async {
-              await s.authenticate(email: email, name: name);
-            },
-          );
+          return const AuthScreen();
         }
 
         if (!s.onboardingDone) {
@@ -160,6 +128,7 @@ class _AppRootState extends State<AppRoot> {
         return MainScaffold(
           localeController: widget.localeController,
           session: s,
+          settings: widget.settings,
           onLogout: () async {
             await s.logout();
           },
@@ -174,12 +143,14 @@ class _AppRootState extends State<AppRoot> {
 class MainScaffold extends StatefulWidget {
   final LocaleController localeController;
   final SessionController session;
+  final SettingsController settings;
   final Future<void> Function() onLogout;
 
   const MainScaffold({
     super.key,
     required this.localeController,
     required this.session,
+    required this.settings,
     required this.onLogout,
   });
 
@@ -218,6 +189,7 @@ class _MainScaffoldState extends State<MainScaffold> {
       SettingsScreen(
         appState: _appState,
         localeController: widget.localeController,
+        settings: widget.settings,
         session: widget.session,
         onLogout: widget.onLogout,
       ),

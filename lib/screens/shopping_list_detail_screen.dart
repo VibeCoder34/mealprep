@@ -89,7 +89,7 @@ class ShoppingListDetailScreen extends StatelessWidget {
       ),
     );
     if (ok == true && context.mounted) {
-      final removed = appState.deleteShoppingList(listId);
+      final removed = await appState.deleteShoppingList(listId);
       if (!removed && context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -106,89 +106,118 @@ class ShoppingListDetailScreen extends StatelessWidget {
     }
   }
 
-  void _showEditSheet(BuildContext context, ShoppingListBundle bundle) {
+  Future<void> _showEditSheet(BuildContext context, ShoppingListBundle bundle) async {
     final l10n = AppLocalizations.of(context)!;
     final nameCtrl = TextEditingController(text: bundle.name);
     final descCtrl = TextEditingController(text: bundle.description);
 
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
-      ),
-      builder: (ctx) {
-        return Padding(
-          padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            top: 16,
-            bottom: MediaQuery.viewInsetsOf(ctx).bottom + 24,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE0E0E0),
-                    borderRadius: BorderRadius.circular(2),
+    try {
+      await showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.white,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+        ),
+        builder: (ctx) {
+          var submitting = false;
+          return StatefulBuilder(
+            builder: (context, setModalState) {
+              Future<void> submit() async {
+                if (submitting) return;
+                FocusScope.of(ctx).unfocus();
+                setModalState(() => submitting = true);
+                await appState.updateShoppingListMeta(
+                  listId,
+                  name: nameCtrl.text,
+                  description: descCtrl.text,
+                );
+                if (ctx.mounted) Navigator.of(ctx).pop();
+              }
+
+              return SafeArea(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.only(
+                    left: 20,
+                    right: 20,
+                    top: 16,
+                    bottom: MediaQuery.viewInsetsOf(ctx).bottom + 24,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 36,
+                          height: 4,
+                          margin: const EdgeInsets.only(bottom: 16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE0E0E0),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                      Text(
+                        l10n.editShoppingList,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF1A1A2E),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: nameCtrl,
+                        decoration: InputDecoration(
+                          labelText: l10n.shoppingListNameLabel,
+                          hintText: l10n.shoppingListNameHint,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        textInputAction: TextInputAction.next,
+                        onSubmitted: (_) => submit(),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: descCtrl,
+                        decoration: InputDecoration(
+                          labelText: l10n.shoppingListDescriptionLabel,
+                          hintText: l10n.shoppingListDescriptionHint,
+                          alignLabelWithHint: true,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        minLines: 2,
+                        maxLines: 4,
+                        textInputAction: TextInputAction.done,
+                        onSubmitted: (_) => submit(),
+                      ),
+                      const SizedBox(height: 20),
+                      ElevatedButton(
+                        onPressed: submitting ? null : submit,
+                        child: submitting
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(strokeWidth: 2.4),
+                              )
+                            : Text(l10n.saveList),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-              Text(
-                l10n.editShoppingList,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF1A1A2E),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: nameCtrl,
-                decoration: InputDecoration(
-                  labelText: l10n.shoppingListNameLabel,
-                  hintText: l10n.shoppingListNameHint,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-                ),
-                textInputAction: TextInputAction.next,
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: descCtrl,
-                decoration: InputDecoration(
-                  labelText: l10n.shoppingListDescriptionLabel,
-                  hintText: l10n.shoppingListDescriptionHint,
-                  alignLabelWithHint: true,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-                ),
-                minLines: 2,
-                maxLines: 4,
-                textInputAction: TextInputAction.done,
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () {
-                  appState.updateShoppingListMeta(
-                    listId,
-                    name: nameCtrl.text,
-                    description: descCtrl.text,
-                  );
-                  Navigator.pop(ctx);
-                },
-                child: Text(l10n.saveList),
-              ),
-            ],
-          ),
-        );
-      },
-    );
+              );
+            },
+          );
+        },
+      );
+    } finally {
+      nameCtrl.dispose();
+      descCtrl.dispose();
+    }
   }
 
   @override
@@ -199,11 +228,68 @@ class ShoppingListDetailScreen extends StatelessWidget {
       builder: (context, _) {
         final bundle = appState.shoppingListById(listId);
         if (bundle == null) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (context.mounted) Navigator.of(context).pop();
-          });
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
+          return Scaffold(
+            backgroundColor: const Color(0xFFF5F7FA),
+            appBar: AppBar(
+              backgroundColor: Colors.white,
+              elevation: 0,
+              scrolledUnderElevation: 1,
+              surfaceTintColor: Colors.transparent,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 19),
+                color: const Color(0xFF1A1A2E),
+                onPressed: () => Navigator.of(context).maybePop(),
+              ),
+              title: Text(
+                l10n.shoppingListTitle,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF1A1A2E),
+                  letterSpacing: -0.5,
+                ),
+              ),
+            ),
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 40),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text('🗂️', style: TextStyle(fontSize: 60)),
+                    const SizedBox(height: 14),
+                    Text(
+                      l10n.shoppingListNotFoundTitle,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF1A1A2E),
+                        letterSpacing: -0.4,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      l10n.shoppingListNotFoundBody,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 14.5,
+                        color: Color(0xFF9E9E9E),
+                        height: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.of(context).maybePop(),
+                        child: Text(l10n.goBack),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           );
         }
 
@@ -217,20 +303,16 @@ class ShoppingListDetailScreen extends StatelessWidget {
         }
 
         return Scaffold(
-          backgroundColor: const Color(0xFFF5F7FA),
           appBar: AppBar(
-            backgroundColor: Colors.white,
             elevation: 0,
             scrolledUnderElevation: 1,
             surfaceTintColor: Colors.transparent,
             title: Text(
               bundle.name,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF1A1A2E),
-                letterSpacing: -0.5,
-              ),
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.5,
+                  ),
             ),
             actions: [
               IconButton(
@@ -424,6 +506,7 @@ class ShoppingListDetailScreen extends StatelessWidget {
                   ],
                 ),
           floatingActionButton: FloatingActionButton.extended(
+            heroTag: 'shopping_detail_fab_$listId',
             onPressed: () => _openAddManual(context),
             backgroundColor: const Color(0xFF00ACC1),
             foregroundColor: Colors.white,

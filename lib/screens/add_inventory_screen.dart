@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'dart:typed_data';
 import '../app_state.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n_extensions.dart';
 import '../models/inventory_item.dart';
+import 'camera_capture_screen.dart';
 
 class AddInventoryScreen extends StatefulWidget {
   final AppState appState;
@@ -102,6 +104,21 @@ class _PhotoTab extends StatefulWidget {
 class _PhotoTabState extends State<_PhotoTab> {
   bool _hasScanned = false;
   final List<_DetectedItem> _detectedItems = [];
+  Uint8List? _photoBytes;
+  bool _saving = false;
+
+  Future<void> _openCamera() async {
+    final bytes = await Navigator.of(context).push<Uint8List>(
+      MaterialPageRoute(builder: (_) => const CameraCaptureScreen()),
+    );
+    if (!mounted) return;
+    if (bytes == null) return;
+    setState(() {
+      _photoBytes = bytes;
+      _hasScanned = false;
+      _detectedItems.clear();
+    });
+  }
 
   void _simulateScan() {
     setState(() {
@@ -117,18 +134,23 @@ class _PhotoTabState extends State<_PhotoTab> {
     });
   }
 
-  void _addAll() {
+  Future<void> _addAll() async {
     final l10n = AppLocalizations.of(context)!;
     final count = _detectedItems.length;
+    if (_saving) return;
+    setState(() => _saving = true);
     for (final item in _detectedItems) {
-      widget.appState.addItem(InventoryItem(
-        id: '${DateTime.now().millisecondsSinceEpoch}_${item.name}',
-        name: item.name,
-        emoji: item.emoji,
-        quantity: item.quantity,
-        unit: item.unit,
-      ));
+      await widget.appState.addItem(
+        InventoryItem(
+          id: '${DateTime.now().millisecondsSinceEpoch}_${item.name}',
+          name: item.name,
+          emoji: item.emoji,
+          quantity: item.quantity,
+          unit: item.unit,
+        ),
+      );
     }
+    if (!mounted) return;
     Navigator.of(context).pop();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -155,7 +177,7 @@ class _PhotoTabState extends State<_PhotoTab> {
         children: [
           const SizedBox(height: 4),
           GestureDetector(
-            onTap: _simulateScan,
+            onTap: _openCamera,
             child: Container(
               height: 260,
               decoration: BoxDecoration(
@@ -163,47 +185,101 @@ class _PhotoTabState extends State<_PhotoTab> {
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(color: const Color(0xFFE0E0E0), width: 1.5),
               ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const _IconBox(
-                    icon: Icons.camera_alt_outlined,
-                    color: Color(0xFF00ACC1),
-                    bg: Color(0xFFE0F7FA),
-                  ),
-                  const SizedBox(height: 18),
-                  Text(
-                    l10n.cameraPreview,
-                    style: const TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF424242),
-                      letterSpacing: -0.3,
+              child: _photoBytes == null
+                  ? Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const _IconBox(
+                          icon: Icons.camera_alt_outlined,
+                          color: Color(0xFF00ACC1),
+                          bg: Color(0xFFE0F7FA),
+                        ),
+                        const SizedBox(height: 18),
+                        Text(
+                          l10n.cameraPreview,
+                          style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF424242),
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          l10n.cameraHint,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 13.5,
+                            color: Color(0xFF9E9E9E),
+                            height: 1.5,
+                          ),
+                        ),
+                      ],
+                    )
+                  : ClipRRect(
+                      borderRadius: BorderRadius.circular(24),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Image.memory(
+                            _photoBytes!,
+                            fit: BoxFit.cover,
+                          ),
+                          Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Colors.black.withValues(alpha: 0.25),
+                                  Colors.transparent,
+                                  Colors.black.withValues(alpha: 0.35),
+                                ],
+                              ),
+                            ),
+                          ),
+                          Align(
+                            alignment: Alignment.bottomLeft,
+                            child: Padding(
+                              padding: const EdgeInsets.all(14),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withValues(alpha: 0.45),
+                                      borderRadius: BorderRadius.circular(999),
+                                      border: Border.all(color: Colors.white10),
+                                    ),
+                                    child: const Text(
+                                      'Fotoğraf hazır',
+                                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12.5),
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  IconButton(
+                                    onPressed: _openCamera,
+                                    icon: const Icon(Icons.refresh_rounded, color: Colors.white),
+                                    tooltip: l10n.retake,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    l10n.cameraHint,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 13.5,
-                      color: Color(0xFF9E9E9E),
-                      height: 1.5,
-                    ),
-                  ),
-                ],
-              ),
             ),
           ),
           const SizedBox(height: 20),
           ElevatedButton.icon(
-            onPressed: _simulateScan,
+            onPressed: _openCamera,
             icon: const Icon(Icons.camera_alt_rounded, size: 20),
             label: Text(l10n.takePhoto),
           ),
           const SizedBox(height: 10),
           OutlinedButton.icon(
-            onPressed: _simulateScan,
+            onPressed: _openCamera,
             style: OutlinedButton.styleFrom(
               foregroundColor: const Color(0xFF00ACC1),
               side: const BorderSide(color: Color(0xFF00ACC1), width: 1.5),
@@ -216,6 +292,14 @@ class _PhotoTabState extends State<_PhotoTab> {
             icon: const Icon(Icons.photo_library_outlined, size: 20),
             label: Text(l10n.chooseFromLibrary),
           ),
+          if (_photoBytes != null) ...[
+            const SizedBox(height: 14),
+            ElevatedButton.icon(
+              onPressed: _simulateScan,
+              icon: const Icon(Icons.auto_awesome_rounded, size: 20),
+              label: const Text('Taramayı başlat (mock)'),
+            ),
+          ],
           const SizedBox(height: 22),
           Container(
             padding: const EdgeInsets.all(14),
@@ -310,8 +394,14 @@ class _PhotoTabState extends State<_PhotoTab> {
             child: SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _detectedItems.isEmpty ? null : _addAll,
-                child: Text(l10n.addAllCount(_detectedItems.length)),
+                onPressed: _detectedItems.isEmpty || _saving ? null : _addAll,
+                child: _saving
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(strokeWidth: 2.4),
+                      )
+                    : Text(l10n.addAllCount(_detectedItems.length)),
               ),
             ),
           ),
@@ -545,11 +635,11 @@ class _ManualTabState extends State<_ManualTab> {
     return '🥫';
   }
 
-  void _addItem() {
+  Future<void> _addItem() async {
     final name = _nameController.text.trim();
     if (name.isEmpty) return;
 
-    widget.appState.addItem(InventoryItem(
+    await widget.appState.addItem(InventoryItem(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       name: name,
       emoji: _getEmoji(name),
@@ -557,6 +647,7 @@ class _ManualTabState extends State<_ManualTab> {
       unit: _unit,
     ));
 
+    if (!mounted) return;
     final l10n = AppLocalizations.of(context)!;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

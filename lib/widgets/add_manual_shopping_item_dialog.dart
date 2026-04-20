@@ -15,6 +15,7 @@ Future<void> showAddManualShoppingItemDialog(
   return showDialog<void>(
     context: context,
     barrierDismissible: true,
+    useRootNavigator: true,
     builder: (ctx) => _AddManualShoppingItemDialog(
       appState: appState,
       listId: listId,
@@ -58,21 +59,43 @@ class _AddManualShoppingItemDialogState
     extends State<_AddManualShoppingItemDialog> {
   final _formKey = GlobalKey<FormState>();
   final _nameCtrl = TextEditingController();
+  final _nameFocus = FocusNode();
   final _qtyCtrl = TextEditingController();
   String _unit = kTurkishShoppingUnitLabels.first;
+  bool _submitting = false;
+  bool _showSuggestions = true;
+  String? _pickedSuggestion;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameFocus.addListener(() {
+      if (!_nameFocus.hasFocus) {
+        setState(() => _showSuggestions = false);
+      } else {
+        setState(() => _showSuggestions = true);
+      }
+    });
+  }
 
   @override
   void dispose() {
     _nameCtrl.dispose();
+    _nameFocus.dispose();
     _qtyCtrl.dispose();
     super.dispose();
   }
 
   List<String> get _suggestions {
-    return filterTurkishShoppingSuggestions(_nameCtrl.text);
+    if (!_showSuggestions) return const [];
+    final q = _nameCtrl.text.trim();
+    if (q.length < 2) return const [];
+    if (_pickedSuggestion != null && q == _pickedSuggestion) return const [];
+    return filterTurkishShoppingSuggestions(q);
   }
 
-  void _submit(AppLocalizations l10n) {
+  Future<void> _submit(AppLocalizations l10n) async {
+    if (_submitting) return;
     FocusScope.of(context).unfocus();
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
@@ -80,6 +103,7 @@ class _AddManualShoppingItemDialogState
     final q = _parsePositiveQuantity(_qtyCtrl.text);
     if (name.isEmpty || q == null || q <= 0) return;
 
+    setState(() => _submitting = true);
     final id = 'mi_${DateTime.now().millisecondsSinceEpoch}';
     final item = ShoppingItem(
       id: id,
@@ -87,12 +111,17 @@ class _AddManualShoppingItemDialogState
       amount: _formatAmountLine(q, _unit),
       recipeId: 'manual',
     );
-    widget.appState.addManualShoppingItem(widget.listId, item);
+    await widget.appState.addManualShoppingItem(widget.listId, item);
 
     _nameCtrl.clear();
     _qtyCtrl.clear();
-    setState(() => _unit = kTurkishShoppingUnitLabels.first);
+    setState(() {
+      _unit = kTurkishShoppingUnitLabels.first;
+      _pickedSuggestion = null;
+      _showSuggestions = false;
+    });
 
+    if (!mounted) return;
     Navigator.of(context).pop();
   }
 
@@ -114,18 +143,32 @@ class _AddManualShoppingItemDialogState
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  l10n.addManualIngredientFab,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF1A1A2E),
-                    letterSpacing: -0.3,
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        l10n.addManualIngredientFab,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF1A1A2E),
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: l10n.cancel,
+                      onPressed: () =>
+                          Navigator.of(context, rootNavigator: true).maybePop(),
+                      icon: const Icon(Icons.close_rounded),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 18),
                 TextFormField(
                   controller: _nameCtrl,
+                  focusNode: _nameFocus,
                   textInputAction: TextInputAction.next,
                   decoration: InputDecoration(
                     labelText: l10n.shoppingIngredientNameLabel,
@@ -134,7 +177,13 @@ class _AddManualShoppingItemDialogState
                       borderRadius: BorderRadius.circular(14),
                     ),
                   ),
-                  onChanged: (_) => setState(() {}),
+                  onChanged: (v) {
+                    if (_pickedSuggestion != null && v.trim() != _pickedSuggestion) {
+                      _pickedSuggestion = null;
+                      _showSuggestions = true;
+                    }
+                    setState(() {});
+                  },
                   validator: (v) {
                     if (v == null || v.trim().isEmpty) {
                       return l10n.shoppingNameRequired;
@@ -172,11 +221,15 @@ class _AddManualShoppingItemDialogState
                               ),
                             ),
                             onTap: () {
+                              FocusScope.of(context).unfocus();
                               _nameCtrl.text = s;
                               _nameCtrl.selection = TextSelection.collapsed(
                                 offset: _nameCtrl.text.length,
                               );
-                              setState(() {});
+                              setState(() {
+                                _pickedSuggestion = s;
+                                _showSuggestions = false;
+                              });
                             },
                           );
                         },
@@ -259,14 +312,20 @@ class _AddManualShoppingItemDialogState
                     const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: () => _submit(l10n),
+                        onPressed: _submitting ? null : () => _submit(l10n),
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
                           ),
                         ),
-                        child: Text(l10n.shoppingAddIngredientButton),
+                        child: _submitting
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(strokeWidth: 2.4),
+                              )
+                            : Text(l10n.shoppingAddIngredientButton),
                       ),
                     ),
                   ],

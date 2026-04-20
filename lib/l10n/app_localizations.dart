@@ -706,6 +706,24 @@ abstract class AppLocalizations {
   /// **'Add missing ingredients from a recipe, or use another list.'**
   String get emptyListDetailBody;
 
+  /// No description provided for @shoppingListNotFoundTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Shopping list not found'**
+  String get shoppingListNotFoundTitle;
+
+  /// No description provided for @shoppingListNotFoundBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This list may have been deleted or is no longer available.'**
+  String get shoppingListNotFoundBody;
+
+  /// No description provided for @goBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Go back'**
+  String get goBack;
+
   /// No description provided for @cancel.
   ///
   /// In en, this message translates to:

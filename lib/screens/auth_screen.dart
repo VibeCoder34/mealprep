@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
+import '../services/supabase_service.dart';
 import 'terms_placeholder_screen.dart';
 
-/// Mock sign in / sign up — stores session via [onAuthenticated] callback.
 class AuthScreen extends StatefulWidget {
-  final Future<void> Function({required String email, required String name})
-      onAuthenticated;
-
-  const AuthScreen({super.key, required this.onAuthenticated});
+  const AuthScreen({super.key});
 
   @override
   State<AuthScreen> createState() => _AuthScreenState();
@@ -64,8 +61,28 @@ class _AuthScreenState extends State<AuthScreen> {
     );
   }
 
+  void _showError(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg), behavior: SnackBarBehavior.floating),
+    );
+  }
+
   Future<void> _submit(AppLocalizations l10n) async {
     if (_submitting) return;
+
+    final email = _email.text.trim();
+    final password = _password.text;
+    final confirm = _confirm.text;
+    final fullName = _fullName.text.trim();
+
+    if (email.isEmpty || !email.contains('@')) {
+      _showError('Geçersiz email adresi');
+      return;
+    }
+    if (password.length < 6) {
+      _showError('Şifre en az 6 karakter olmalı');
+      return;
+    }
     if (_isSignUp && !_termsAccepted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -75,17 +92,78 @@ class _AuthScreenState extends State<AuthScreen> {
       );
       return;
     }
+    if (_isSignUp && confirm != password) {
+      _showError('Şifreler eşleşmiyor');
+      return;
+    }
     setState(() => _submitting = true);
     try {
-      final email = _email.text.trim().isEmpty ? 'user@local.dev' : _email.text.trim();
-      String name;
       if (_isSignUp) {
-        name = _fullName.text.trim();
-        if (name.isEmpty) name = email.split('@').first;
+        final res = await SupabaseService.instance.signUpWithEmail(
+          email: email,
+          password: password,
+          fullName: fullName.isEmpty ? null : fullName,
+        );
+        final user = res.user;
+        if (user != null) {
+          await SupabaseService.instance.upsertUserProfile(
+            userId: user.id,
+            email: user.email ?? email,
+            fullName: fullName.isEmpty ? null : fullName,
+          );
+        }
       } else {
-        name = email.split('@').first;
+        await SupabaseService.instance.signInWithEmail(
+          email: email,
+          password: password,
+        );
       }
-      await widget.onAuthenticated(email: email, name: name);
+    } on FriendlyAuthException catch (e) {
+      _showError(e.message);
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  Future<void> _forgotPassword(AppLocalizations l10n) async {
+    if (_submitting) return;
+    final controller = TextEditingController(text: _email.text.trim());
+    final email = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.authForgotPassword),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.emailAddress,
+          decoration: _fieldDecoration(l10n.authEmail),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(null),
+            child: const Text('İptal'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
+            child: const Text('Gönder'),
+          ),
+        ],
+      ),
+    ).whenComplete(controller.dispose);
+    if (email == null || email.isEmpty) return;
+    if (!mounted) return;
+    setState(() => _submitting = true);
+    try {
+      await SupabaseService.instance.resetPasswordForEmail(email);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Şifre sıfırlama bağlantısı email adresinize gönderildi'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } on FriendlyAuthException catch (e) {
+      if (!mounted) return;
+      _showError(e.message);
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -289,7 +367,8 @@ class _AuthScreenState extends State<AuthScreen> {
                       Align(
                         alignment: Alignment.centerRight,
                         child: TextButton(
-                          onPressed: () {},
+                          onPressed:
+                              _submitting ? null : () => _forgotPassword(l10n),
                           style: TextButton.styleFrom(
                             foregroundColor: _primary,
                             padding: const EdgeInsets.symmetric(

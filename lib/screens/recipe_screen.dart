@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../app_state.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n_extensions.dart';
-import '../mock_data.dart';
 import '../models/recipe.dart';
 import '../widgets/premium_feature_modal.dart';
 import 'add_inventory_screen.dart';
@@ -51,7 +50,7 @@ class _RecipeScreenState extends State<RecipeScreen> {
   ];
 
   List<Recipe> _filteredRecipes(AppState appState) {
-    final recipes = MockData.recipes;
+    final recipes = appState.recipes;
     if (_selectedCategory == 'all') return recipes;
     return recipes.where((r) => r.categoryKey == _selectedCategory).toList();
   }
@@ -60,20 +59,16 @@ class _RecipeScreenState extends State<RecipeScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
-        backgroundColor: Colors.white,
         elevation: 0,
         scrolledUnderElevation: 1,
         surfaceTintColor: Colors.transparent,
         title: Text(
           l10n.recipeSuggestions,
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w800,
-            color: Color(0xFF1A1A2E),
-            letterSpacing: -0.5,
-          ),
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.5,
+              ),
         ),
       ),
       body: ListenableBuilder(
@@ -272,7 +267,12 @@ class _RecipeScreenState extends State<RecipeScreen> {
     }
     final savedIds = widget.appState.savedRecipeIds;
     final savedRecipes = savedIds
-        .map((id) => MockData.recipeById(id))
+        .map((id) {
+          for (final r in widget.appState.recipes) {
+            if (r.id == id) return r;
+          }
+          return null;
+        })
         .whereType<Recipe>()
         .toList(growable: false);
 
@@ -307,7 +307,7 @@ class _RecipeScreenState extends State<RecipeScreen> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        l10n.recipesFoundCount(MockData.recipes.length),
+                        l10n.recipesFoundCount(widget.appState.recipes.length),
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 16,
@@ -705,7 +705,7 @@ class _RecipeCard extends StatelessWidget {
             IconButton(
               visualDensity: VisualDensity.compact,
               onPressed: () async {
-                final ok = appState.toggleSavedRecipe(recipe.id);
+                final ok = await appState.toggleSavedRecipe(recipe.id);
                 if (!ok && context.mounted) {
                   await showPremiumSavedLimitModal(context);
                 }

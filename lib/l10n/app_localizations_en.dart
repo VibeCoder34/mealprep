@@ -345,6 +345,16 @@ class AppLocalizationsEn extends AppLocalizations {
       'Add missing ingredients from a recipe, or use another list.';
 
   @override
+  String get shoppingListNotFoundTitle => 'Shopping list not found';
+
+  @override
+  String get shoppingListNotFoundBody =>
+      'This list may have been deleted or is no longer available.';
+
+  @override
+  String get goBack => 'Go back';
+
+  @override
   String get cancel => 'Cancel';
 
   @override

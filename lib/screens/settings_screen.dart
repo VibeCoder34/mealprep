@@ -4,11 +4,13 @@ import '../locale_controller.dart';
 import '../l10n/app_localizations.dart';
 import '../models/diet_keys.dart';
 import '../session_controller.dart';
+import '../settings_controller.dart';
 import '../widgets/premium_feature_modal.dart';
 
 class SettingsScreen extends StatelessWidget {
   final AppState appState;
   final LocaleController localeController;
+  final SettingsController settings;
   final SessionController session;
   final Future<void> Function() onLogout;
 
@@ -16,6 +18,7 @@ class SettingsScreen extends StatelessWidget {
     super.key,
     required this.appState,
     required this.localeController,
+    required this.settings,
     required this.session,
     required this.onLogout,
   });
@@ -119,21 +122,20 @@ class SettingsScreen extends StatelessWidget {
         return ListenableBuilder(
           listenable: session,
           builder: (context, _) {
-            return Scaffold(
-          backgroundColor: const Color(0xFFF5F7FA),
+            return ListenableBuilder(
+              listenable: settings,
+              builder: (context, _) {
+                return Scaffold(
           appBar: AppBar(
-            backgroundColor: Colors.white,
             elevation: 0,
             scrolledUnderElevation: 1,
             surfaceTintColor: Colors.transparent,
             title: Text(
               l10n.settingsTitle,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF1A1A2E),
-                letterSpacing: -0.5,
-              ),
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.5,
+                  ),
             ),
           ),
           body: SingleChildScrollView(
@@ -189,8 +191,8 @@ class SettingsScreen extends StatelessWidget {
                       iconColor: const Color(0xFFFF7043),
                       title: l10n.notifications,
                       trailing: Switch(
-                        value: true,
-                        onChanged: (_) {},
+                        value: settings.notificationsEnabled,
+                        onChanged: (v) => settings.setNotificationsEnabled(v),
                         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
                     ),
@@ -199,8 +201,8 @@ class SettingsScreen extends StatelessWidget {
                       iconColor: const Color(0xFF7E57C2),
                       title: l10n.darkMode,
                       trailing: Switch(
-                        value: false,
-                        onChanged: (_) {},
+                        value: settings.darkModeEnabled,
+                        onChanged: (v) => settings.setDarkModeEnabled(v),
                         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
                     ),
@@ -294,6 +296,8 @@ class SettingsScreen extends StatelessWidget {
               ],
             ),
           ),
+            );
+              },
             );
           },
         );

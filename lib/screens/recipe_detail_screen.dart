@@ -96,9 +96,9 @@ class RecipeDetailScreen extends StatelessWidget {
                     children: [
                       if (existing != null) ...[
                         TextButton(
-                          onPressed: () {
-                            appState.removeRecipeRating(recipe.id);
-                            Navigator.pop(ctx);
+                          onPressed: () async {
+                            await appState.removeRecipeRating(recipe.id);
+                            if (ctx.mounted) Navigator.pop(ctx);
                           },
                           style: TextButton.styleFrom(
                             foregroundColor: const Color(0xFFE53935),
@@ -121,13 +121,13 @@ class RecipeDetailScreen extends StatelessWidget {
                       ElevatedButton(
                         onPressed: selected == 0
                             ? null
-                            : () {
-                                appState.setRecipeRating(
+                            : () async {
+                                await appState.setRecipeRating(
                                   recipe.id,
                                   rating: selected,
                                   comment: ctrl.text,
                                 );
-                                Navigator.pop(ctx);
+                                if (ctx.mounted) Navigator.pop(ctx);
                               },
                         child: Text(l10n.ratingSave),
                       ),
@@ -142,7 +142,7 @@ class RecipeDetailScreen extends StatelessWidget {
     ).whenComplete(ctrl.dispose);
   }
 
-  void _selectRecipe(BuildContext context) {
+  Future<void> _selectRecipe(BuildContext context) async {
     final missing = recipe.ingredients.where((i) => !i.isAvailable).toList();
 
     if (missing.isEmpty) {
@@ -166,7 +166,8 @@ class RecipeDetailScreen extends StatelessWidget {
     final lists = appState.shoppingLists;
     if (lists.length <= 1) {
       final id = appState.defaultTargetListId ?? lists.first.id;
-      appState.addShoppingItems(id, newItems);
+      await appState.addShoppingItems(id, newItems);
+      if (!context.mounted) return;
       _showConfirmationSheet(context, addedCount: missing.length);
       return;
     }
@@ -365,7 +366,7 @@ class RecipeDetailScreen extends StatelessWidget {
             actions: [
               IconButton(
                 onPressed: () async {
-                  final ok = appState.toggleSavedRecipe(recipe.id);
+                  final ok = await appState.toggleSavedRecipe(recipe.id);
                   if (!ok && context.mounted) {
                     await showPremiumSavedLimitModal(context);
                   }
