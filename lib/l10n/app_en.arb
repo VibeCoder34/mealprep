@@ -1,0 +1,392 @@
+{
+  "@@locale": "en",
+  "appTitle": "Meal Prep",
+  "navPantry": "Pantry",
+  "navRecipes": "Recipes",
+  "navShopping": "Shopping",
+  "navSettings": "Settings",
+  "onboarding1Title": "Organize Your Kitchen",
+  "onboarding1Body": "Track your pantry by snapping a photo\nor adding items manually.",
+  "onboarding2Title": "Smart Recipes",
+  "onboarding2Body": "Get personalized recipe ideas\nbased on what you already have.",
+  "onboarding3Title": "Shopping List",
+  "onboarding3Body": "Missing ingredients are listed\nautomatically. Easy to share too.",
+  "skip": "Skip",
+  "continueButton": "Continue",
+  "letsGo": "Let's Go",
+  "myKitchen": "My Kitchen",
+  "yourPantry": "Your Pantry",
+  "totalItemsCount": "Total: {count} items",
+  "@totalItemsCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "addItem": "Add Item",
+  "addToPantry": "Add to Pantry",
+  "takePhotoOrManual": "Take a photo or add manually",
+  "getStarted": "Get Started",
+  "delete": "Delete",
+  "lowInventoryHint": "Add more items to discover more recipes",
+  "addMoreShort": "Add →",
+  "pantryEmpty": "Pantry is Empty",
+  "pantryEmptySubtitle": "Start adding your kitchen items to discover personalized recipes.",
+  "addFirstItem": "Add Your First Item",
+  "recipeSuggestions": "Recipe Suggestions",
+  "noPantryItems": "No items in your pantry",
+  "noPantryItemsSubtitle": "Add kitchen items to your pantry first\nto get personalized recipe suggestions.",
+  "addItemsButton": "Add Items",
+  "discoverRecipes": "Discover Recipes",
+  "personalizedRecipesBody": "We'll create personalized recipes\nbased on your {count} pantry items.",
+  "@personalizedRecipesBody": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "generateRecipes": "Generate Recipes",
+  "fromPantry": "From Pantry",
+  "quickRecipes": "Quick Recipes",
+  "withPantryItemsCount": "With {count} items in your pantry",
+  "@withPantryItemsCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "recipesFoundCount": "{count} recipes found!",
+  "@recipesFoundCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "refresh": "Refresh",
+  "noRecipesInCategory": "No recipes found in this category",
+  "prepTimeMin": "{n} min",
+  "@prepTimeMin": {
+    "placeholders": {
+      "n": {"type": "int"}
+    }
+  },
+  "recipeCardAllAvailable": "All ingredients available ✓",
+  "recipeCardPartial": "{available}/{total} available  ·  {missing} missing",
+  "@recipeCardPartial": {
+    "placeholders": {
+      "available": {"type": "int"},
+      "total": {"type": "int"},
+      "missing": {"type": "int"}
+    }
+  },
+  "savedRecipesTitle": "Saved Recipes",
+  "premiumUnlimitedSavedRecipes": "Unlimited saved recipes for Premium",
+  "upgradeToPremium": "Upgrade to Premium",
+  "collectionsAll": "All",
+  "rateRecipeTitle": "Rate",
+  "addCommentLabel": "Add Comment",
+  "ratingSave": "Save",
+  "ratingDelete": "Delete",
+  "categoryAll": "All",
+  "categoryBreakfast": "Breakfast",
+  "categoryDinner": "Dinner",
+  "categorySnack": "Snack",
+  "categoryHighProtein": "High protein",
+  "categoryVeganFilter": "Vegan",
+  "categoryLowCarb": "Low carb",
+  "categoryQuick": "Quick",
+  "categoryLunch": "Lunch",
+  "difficultyEasy": "Easy",
+  "difficultyMedium": "Medium",
+  "dietHighProtein": "High protein",
+  "dietLowCarb": "Low carb",
+  "premiumFeatureTitle": "This feature is part of Premium",
+  "premiumFeatureDefaultBody": "Unlock AI tools, weekly planning, and unlimited filters and saves.",
+  "upgradeToPremiumCta": "Upgrade to Premium",
+  "premiumUnlimitedFiltersTitle": "Unlimited filters on Premium",
+  "premiumUnlimitedFiltersBody": "Pick as many dietary filters as you need with Premium.",
+  "premiumUnlimitedSavedTitle": "Unlimited saves on Premium",
+  "premiumUnlimitedSavedBody": "Save as many recipes as you want with Premium.",
+  "featAiRecipeCreate": "Create recipe (AI)",
+  "featMacroOptimize": "Optimize macros",
+  "featWeeklyMealPlan": "Weekly meal plan",
+  "featNutritionAnalysis": "Nutrition analysis",
+  "authFullName": "Full name",
+  "authTermsAgree": "I have read and accept the terms",
+  "authTermsOpen": "Terms",
+  "termsPlaceholderBody": "Terms of service will appear here. This is a placeholder screen for the MVP.",
+  "logout": "Log out",
+  "freeTierBadge": "Free",
+  "premiumRecipeBadge": "Premium",
+  "shoppingListTitle": "Shopping List",
+  "shoppingListsTitle": "Shopping lists",
+  "newShoppingList": "New list",
+  "shoppingListNameLabel": "List name",
+  "shoppingListNameHint": "e.g. Weekend dinner, Party…",
+  "shoppingListDescriptionLabel": "Description",
+  "shoppingListDescriptionHint": "Optional — what is this list for?",
+  "createShoppingList": "Create list",
+  "saveList": "Save",
+  "editShoppingList": "Edit list",
+  "deleteShoppingList": "Delete list",
+  "deleteShoppingListConfirm": "Delete this list and all its items?",
+  "cannotDeleteLastList": "You need at least one shopping list.",
+  "chooseListForRecipe": "Add missing ingredients to",
+  "confirmAddToList": "Add to list",
+  "listItemsCount": "{count, plural, one{1 item} other{{count} items}}",
+  "@listItemsCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "shoppingListProgress": "{bought} / {total} done",
+  "@shoppingListProgress": {
+    "placeholders": {
+      "bought": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  },
+  "emptyListDetailTitle": "Nothing here yet",
+  "emptyListDetailBody": "Add missing ingredients from a recipe, or use another list.",
+  "cancel": "Cancel",
+  "shareTooltip": "Share",
+  "listCopied": "List copied to clipboard!",
+  "copiedToClipboard": "Copied to clipboard",
+  "dietaryPreferencesTitle": "Dietary Preferences",
+  "dietaryLimitFreeHint": "On Free plan you can select up to 2 preferences",
+  "dietVegan": "Vegan",
+  "dietVegetarian": "Vegetarian",
+  "dietKeto": "Keto",
+  "dietGlutenFree": "Gluten-free",
+  "dietHalal": "Halal",
+  "dietNoDairy": "No dairy",
+  "itemsLeft": "{count, plural, one{1 item left} other{{count} items left}}",
+  "@itemsLeft": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "itemsCompleted": "{bought} / {total} completed",
+  "@itemsCompleted": {
+    "placeholders": {
+      "bought": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  },
+  "emptyShoppingTitle": "Shopping List is Empty",
+  "emptyShoppingBody": "Pick a recipe and add missing ingredients\nto your list automatically.",
+  "goToRecipes": "Go to Recipes",
+  "emptyShoppingTip": "On the recipe screen, tap \"Select This Recipe\" to add missing items to your list.",
+  "settingsTitle": "Settings",
+  "sectionFeatures": "Features",
+  "sectionGeneral": "General",
+  "sectionAbout": "About",
+  "language": "Language",
+  "notifications": "Notifications",
+  "darkMode": "Dark Mode",
+  "rateApp": "Rate the App",
+  "shareFriends": "Share with Friends",
+  "version": "Version",
+  "userLabel": "User",
+  "freePlan": "Free Plan",
+  "premiumPlan": "⭐ Premium",
+  "goPremium": "Go Premium",
+  "premiumPrice": "$4.99/mo",
+  "premiumBullet1": "🤖 AI recipe personalization",
+  "premiumBullet2": "📊 Detailed nutrition tracking",
+  "premiumBullet3": "🔄 Unlimited inventory",
+  "premiumBullet4": "📅 Weekly meal planning",
+  "tryFree7Days": "Try Free — 7 Days",
+  "premiumMemberTitle": "You are a Premium Member",
+  "premiumMemberSubtitle": "All features unlocked",
+  "upgradedPremium": "Upgraded to Premium! 🎉",
+  "featInventory": "Inventory Tracking",
+  "featRecipes": "Recipe Suggestions",
+  "featShopping": "Shopping List",
+  "featAiPhoto": "AI Photo Recognition",
+  "featAiPersonal": "AI Personalization",
+  "featNutrition": "Nutrition Tracking",
+  "featWeekly": "Weekly Planning",
+  "featUnlimited": "Unlimited Recipes",
+  "proBadge": "PRO",
+  "upgradeSheetTitle": "Go Premium",
+  "upgradeSheetSubtitle": "AI recipe suggestions, nutrition tracking, and more.",
+  "upgradeSheetCta": "Try 7 Days Free — $4.99/mo",
+  "notNow": "Not Now",
+  "addToPantryTitle": "Add to Pantry",
+  "tabPhoto": "Photo",
+  "tabManual": "Manual",
+  "itemsAddedToPantry": "{count} items added to pantry!",
+  "@itemsAddedToPantry": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "cameraPreview": "Camera Preview",
+  "cameraHint": "Photograph your ingredients\nand let AI identify them",
+  "takePhoto": "Take Photo",
+  "chooseFromLibrary": "Choose from Library",
+  "aiPhotoTip": "AI will automatically detect ingredients in the photo and add them to your list.",
+  "itemsDetectedBanner": "{count} items detected! Edit and add them.",
+  "@itemsDetectedBanner": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "retake": "Retake",
+  "addAllCount": "Add All ({count})",
+  "@addAllCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "itemName": "Item Name",
+  "nameHint": "e.g. Tomatoes, Eggs...",
+  "quantity": "Quantity",
+  "addToPantryButton": "Add to Pantry",
+  "quickAdd": "Quick Add",
+  "itemAdded": "{name} added!",
+  "@itemAdded": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "nutritionEstimated": "Nutrition (estimated)",
+  "calories": "Calories",
+  "protein": "Protein",
+  "carbs": "Carbs",
+  "fat": "Fat",
+  "kcal": "kcal",
+  "ingredientsSection": "Ingredients",
+  "instructionsSection": "Instructions",
+  "missingCountShort": "{count} missing",
+  "@missingCountShort": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "legendHave": "Have it",
+  "legendMissing": "Missing",
+  "missingIngredientsBanner": "{count, plural, one{1 missing ingredient} other{{count} missing ingredients}} — you can add them to your list",
+  "@missingIngredientsBanner": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "allIngredientsAvailable": "All ingredients are available in your pantry!",
+  "selectRecipeWithMissing": "Select This Recipe  ({count} missing → added to list)",
+  "@selectRecipeWithMissing": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "selectRecipe": "Select This Recipe",
+  "sheetReadyTitle": "Ready to Cook!",
+  "sheetSelectedTitle": "Recipe Selected!",
+  "sheetReadyBody": "You have everything needed\nfor {recipeName}. Enjoy!",
+  "@sheetReadyBody": {
+    "placeholders": {
+      "recipeName": {"type": "String"}
+    }
+  },
+  "sheetAddedBody": "{count, plural, one{1 missing ingredient} other{{count} missing ingredients}} for {recipeName}\nadded to your shopping list.",
+  "@sheetAddedBody": {
+    "placeholders": {
+      "count": {"type": "int"},
+      "recipeName": {"type": "String"}
+    }
+  },
+  "done": "Done",
+  "generalGroup": "General",
+  "recipeR1Name": "Shakshuka Eggs",
+  "recipeR2Name": "Chicken Sauté",
+  "recipeR3Name": "Cheese Omelette",
+  "recipeR4Name": "French Fries",
+  "recipeR5Name": "Garlic Chicken",
+  "recipeR1Step0": "Finely chop the onion and sauté in olive oil.",
+  "recipeR1Step1": "Dice the pepper and tomato, add to the pan and sauté.",
+  "recipeR1Step2": "Crack in the eggs and stir to combine.",
+  "recipeR1Step3": "Cook on low heat, season with salt and black pepper.",
+  "recipeR1Step4": "Serve hot.",
+  "recipeR2Step0": "Cut the chicken into bite-sized cubes.",
+  "recipeR2Step1": "Sauté the onion and garlic in olive oil.",
+  "recipeR2Step2": "Add the chicken and sear on all sides.",
+  "recipeR2Step3": "Add tomato and pepper, season with salt and black pepper.",
+  "recipeR2Step4": "Cover and simmer on low heat for 15 minutes.",
+  "recipeR2Step5": "Finish with dried thyme and serve hot.",
+  "recipeR3Step0": "Whisk the eggs together with salt.",
+  "recipeR3Step1": "Melt the butter in a non-stick pan.",
+  "recipeR3Step2": "Pour in the egg mixture.",
+  "recipeR3Step3": "Once the base sets, sprinkle grated cheese on one side.",
+  "recipeR3Step4": "Fold and transfer to a plate.",
+  "recipeR4Step0": "Peel the potatoes and cut into strips.",
+  "recipeR4Step1": "Pat them thoroughly dry with paper towels.",
+  "recipeR4Step2": "Fry in hot oil until golden.",
+  "recipeR4Step3": "Drain the oil and sprinkle with salt immediately.",
+  "recipeR4Step4": "Serve hot.",
+  "recipeR5Step0": "Combine garlic, olive oil and lemon juice as a marinade for the chicken.",
+  "recipeR5Step1": "Marinate for 30 minutes.",
+  "recipeR5Step2": "Preheat the oven to 200°C.",
+  "recipeR5Step3": "Sprinkle with thyme and salt.",
+  "recipeR5Step4": "Roast for 25–30 minutes.",
+  "ingEggs": "Eggs",
+  "ingTomato": "Tomato",
+  "ingGreenPepper": "Green Pepper",
+  "ingOnion": "Onion",
+  "ingOliveOil": "Olive Oil",
+  "ingChicken": "Chicken",
+  "ingGarlic": "Garlic",
+  "ingRedPepper": "Red Pepper",
+  "ingCheese": "Cheese",
+  "ingButter": "Butter",
+  "ingSalt": "Salt",
+  "ingPotato": "Potato",
+  "ingSunflowerOil": "Sunflower Oil",
+  "ingLemon": "Lemon",
+  "ingThyme": "Thyme",
+  "ingCucumber": "Cucumber",
+  "ingParsley": "Parsley",
+  "amtToTaste": "To taste",
+  "unitPcs": "pcs",
+  "unitG": "g",
+  "unitKg": "kg",
+  "unitMl": "ml",
+  "unitL": "L",
+  "unitBunch": "bunch",
+  "unitBox": "box",
+  "unitBottle": "bottle",
+  "unitCloves": "cloves",
+  "unitHead": "head",
+  "unitTbsp": "tbsp",
+  "unitTsp": "tsp",
+  "unitMlLong": "ml",
+  "langEnglish": "English",
+  "langSpanish": "Spanish",
+  "langTurkish": "Turkish",
+  "authScreenTitle": "Account",
+  "authHeadlineSignIn": "Welcome back",
+  "authHeadlineSignUp": "Create your account",
+  "authSubSignIn": "Sign in to sync your kitchen across devices.",
+  "authSubSignUp": "Join Meal Prep and plan smarter meals.",
+  "authEmail": "Email",
+  "authPassword": "Password",
+  "authConfirmPassword": "Confirm password",
+  "authForgotPassword": "Forgot password?",
+  "authSignInButton": "Sign In",
+  "authSignUpButton": "Sign Up",
+  "authToggleNoAccount": "Don't have an account?",
+  "authToggleHasAccount": "Already have an account?",
+  "authToggleSignUp": "Sign up",
+  "authToggleSignIn": "Sign in",
+  "authOrWith": "or continue with",
+  "authContinueGoogle": "Google",
+  "authContinueApple": "Apple",
+  "authUiOnlySnack": "This screen is UI-only for now.",
+  "addManualIngredientFab": "Add ingredient",
+  "shoppingIngredientNameLabel": "Item name",
+  "shoppingIngredientNameHint": "e.g. tomatoes, milk…",
+  "shoppingUnitFieldLabel": "Unit",
+  "shoppingAddIngredientButton": "Add",
+  "shoppingBoughtSemantics": "Bought",
+  "shoppingDeleteItemTooltip": "Delete",
+  "manualShoppingGroup": "Added manually",
+  "shoppingNameRequired": "Enter an item name",
+  "shoppingQuantityInvalid": "Enter a quantity greater than 0",
+  "addToShoppingListShort": "Add to shopping list"
+}
