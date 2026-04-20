@@ -595,31 +595,43 @@ class _ManualTabState extends State<_ManualTab> {
 
   static const _emojiMap = {
     'egg': '🥚',
+    'yumurta': '🥚',
     'tomato': '🍅',
+    'domates': '🍅',
     'potato': '🥔',
+    'patates': '🥔',
     'onion': '🧅',
+    'soğan': '🧅',
     'garlic': '🧄',
+    'sarımsak': '🧄',
     'pepper': '🫑',
     'carrot': '🥕',
     'cucumber': '🥒',
     'cheese': '🧀',
+    'peynir': '🧀',
     'chicken': '🍗',
+    'tavuk': '🍗',
     'meat': '🥩',
     'beef': '🥩',
     'fish': '🐟',
     'salmon': '🐟',
     'milk': '🥛',
+    'süt': '🥛',
     'butter': '🧈',
     'oil': '🫙',
     'flour': '🌾',
     'sugar': '🍬',
     'salt': '🧂',
     'bread': '🍞',
+    'ekmek': '🍞',
     'banana': '🍌',
+    'muz': '🍌',
     'apple': '🍎',
+    'elma': '🍎',
     'lemon': '🍋',
     'orange': '🍊',
     'broccoli': '🥦',
+    'brokoli': '🥦',
     'spinach': '🥬',
     'lettuce': '🥗',
     'mushroom': '🍄',
@@ -811,7 +823,8 @@ class _ManualTabState extends State<_ManualTab> {
               final emoji = item.$2;
               final label = l10n.ingredientLabel(name);
               return GestureDetector(
-                onTap: () => setState(() => _nameController.text = name),
+                onTap: () => setState(
+                    () => _nameController.text = l10n.ingredientLabel(name)),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
                       horizontal: 13, vertical: 8),

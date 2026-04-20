@@ -142,6 +142,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noRecipesInCategory => 'No recipes found in this category';
 
   @override
+  String get recipesLoading => 'Loading recipes…';
+
+  @override
+  String get recipesLoadFailed => 'Could not load recipes. Please try again.';
+
+  @override
+  String get recipesEmpty => 'No recipes yet';
+
+  @override
+  String get recipesNoDietMatch =>
+      'No recipes match your nutrition preferences';
+
+  @override
+  String get retryLoad => 'Try again';
+
+  @override
+  String get premiumRecipeCreateHint => 'Create your own recipe with Premium';
+
+  @override
+  String get categoryBalanced => 'Balanced';
+
+  @override
   String prepTimeMin(int n) {
     return '$n min';
   }
@@ -210,7 +232,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get difficultyEasy => 'Easy';
 
   @override
+  String get difficultyVeryEasy => 'Very easy';
+
+  @override
   String get difficultyMedium => 'Medium';
+
+  @override
+  String get difficultyHard => 'Hard';
 
   @override
   String get dietHighProtein => 'High protein';
@@ -829,6 +857,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ingParsley => 'Parsley';
+
+  @override
+  String get ingBroccoli => 'Broccoli';
+
+  @override
+  String get ingMilk => 'Milk';
+
+  @override
+  String get ingBread => 'Bread';
+
+  @override
+  String get ingBanana => 'Banana';
+
+  @override
+  String get ingApple => 'Apple';
 
   @override
   String get amtToTaste => 'To taste';

@@ -340,6 +340,48 @@ abstract class AppLocalizations {
   /// **'No recipes found in this category'**
   String get noRecipesInCategory;
 
+  /// No description provided for @recipesLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading recipes…'**
+  String get recipesLoading;
+
+  /// No description provided for @recipesLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load recipes. Please try again.'**
+  String get recipesLoadFailed;
+
+  /// No description provided for @recipesEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No recipes yet'**
+  String get recipesEmpty;
+
+  /// No description provided for @recipesNoDietMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'No recipes match your nutrition preferences'**
+  String get recipesNoDietMatch;
+
+  /// No description provided for @retryLoad.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get retryLoad;
+
+  /// No description provided for @premiumRecipeCreateHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Create your own recipe with Premium'**
+  String get premiumRecipeCreateHint;
+
+  /// No description provided for @categoryBalanced.
+  ///
+  /// In en, this message translates to:
+  /// **'Balanced'**
+  String get categoryBalanced;
+
   /// No description provided for @prepTimeMin.
   ///
   /// In en, this message translates to:
@@ -466,11 +508,23 @@ abstract class AppLocalizations {
   /// **'Easy'**
   String get difficultyEasy;
 
+  /// No description provided for @difficultyVeryEasy.
+  ///
+  /// In en, this message translates to:
+  /// **'Very easy'**
+  String get difficultyVeryEasy;
+
   /// No description provided for @difficultyMedium.
   ///
   /// In en, this message translates to:
   /// **'Medium'**
   String get difficultyMedium;
+
+  /// No description provided for @difficultyHard.
+  ///
+  /// In en, this message translates to:
+  /// **'Hard'**
+  String get difficultyHard;
 
   /// No description provided for @dietHighProtein.
   ///
@@ -1569,6 +1623,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Parsley'**
   String get ingParsley;
+
+  /// No description provided for @ingBroccoli.
+  ///
+  /// In en, this message translates to:
+  /// **'Broccoli'**
+  String get ingBroccoli;
+
+  /// No description provided for @ingMilk.
+  ///
+  /// In en, this message translates to:
+  /// **'Milk'**
+  String get ingMilk;
+
+  /// No description provided for @ingBread.
+  ///
+  /// In en, this message translates to:
+  /// **'Bread'**
+  String get ingBread;
+
+  /// No description provided for @ingBanana.
+  ///
+  /// In en, this message translates to:
+  /// **'Banana'**
+  String get ingBanana;
+
+  /// No description provided for @ingApple.
+  ///
+  /// In en, this message translates to:
+  /// **'Apple'**
+  String get ingApple;
 
   /// No description provided for @amtToTaste.
   ///

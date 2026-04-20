@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:convert';
 import 'models/inventory_item.dart';
 import 'models/recipe.dart';
@@ -7,6 +8,7 @@ import 'models/recipe_user_rating.dart';
 import 'models/shopping_item.dart';
 import 'models/shopping_list_bundle.dart';
 import 'services/database_service.dart';
+import 'services/recipe_service.dart';
 import 'services/supabase_service.dart';
 
 class AppState extends ChangeNotifier {
@@ -27,17 +29,62 @@ class AppState extends ChangeNotifier {
   List<String> _dietaryPreferences = const [];
   String? _preferredShoppingListId;
   bool _isPremium = false;
+  bool _isSyncingBackend = false;
+  String? _lastBackendSyncError;
+  bool _recipesLoading = false;
+  String? _recipesLoadError;
+
+  final RecipeService _recipeService = RecipeService(Supabase.instance.client);
 
   AppState() {
     _loadCoreData();
     _loadDietaryPreferences();
     _loadPremium();
-    _loadFromBackendIfLoggedIn();
+    Future<void>.microtask(_bootstrap);
+  }
+
+  Future<void> _bootstrap() async {
+    await loadRecipes();
+    await _loadFromBackendIfLoggedIn();
   }
 
   List<InventoryItem> get inventory => List.unmodifiable(_inventory);
   List<ShoppingListBundle> get shoppingLists => List.unmodifiable(_shoppingLists);
   List<Recipe> get recipes => List.unmodifiable(_recipes);
+  bool get isSyncingBackend => _isSyncingBackend;
+  String? get lastBackendSyncError => _lastBackendSyncError;
+  bool get recipesLoading => _recipesLoading;
+  String? get recipesLoadError => _recipesLoadError;
+
+  Future<void> refreshFromBackend() async {
+    await loadRecipes();
+    await _loadFromBackendIfLoggedIn(force: true);
+  }
+
+  /// Loads recipe catalog from Supabase (respects premium + dietary preferences).
+  Future<void> loadRecipes() async {
+    _recipesLoading = true;
+    _recipesLoadError = null;
+    notifyListeners();
+    try {
+      final list = await _recipeService.getRecipes(
+        isPremiumUser: _isPremium,
+        dietaryFilters:
+            _dietaryPreferences.isNotEmpty ? List<String>.from(_dietaryPreferences) : null,
+      );
+      _recipes
+        ..clear()
+        ..addAll(list);
+      await _persistRecipesCache();
+    } catch (_) {
+      _recipesLoadError = 'recipes_load_failed';
+    } finally {
+      _recipesLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<Recipe?> fetchRecipeById(String id) => _recipeService.getRecipeById(id);
 
   ShoppingListBundle? shoppingListById(String id) {
     try {
@@ -77,6 +124,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList(_dietPrefsKey, _dietaryPreferences);
+    await loadRecipes();
     return true;
   }
 
@@ -437,6 +485,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_premiumKey, true);
+    await loadRecipes();
   }
 
   Future<void> _loadCoreData() async {
@@ -533,103 +582,112 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> _loadFromBackendIfLoggedIn() async {
+  Future<void> _loadFromBackendIfLoggedIn({bool force = false}) async {
     final uid = _userId;
     if (uid == null) return;
 
-    try {
-      // Recipes (shared)
-      final recipeRows = await DatabaseService.instance.fetchRecipes();
-      _recipes
-        ..clear()
-        ..addAll(recipeRows.map((m) => Recipe.fromJson(m)));
-      _persistRecipesCache();
-    } catch (_) {}
+    if (_isSyncingBackend) return;
+    _isSyncingBackend = true;
+    if (force) _lastBackendSyncError = null;
+    notifyListeners();
 
+    var hadAnyError = false;
     try {
-      // Inventory
-      final inv = await DatabaseService.instance.fetchInventory(userId: uid);
-      _inventory
-        ..clear()
-        ..addAll(
-          inv.map(
-            (r) => InventoryItem(
-              id: r['id']?.toString() ?? '',
-              name: r['item_name']?.toString() ?? '',
-              emoji: r['emoji']?.toString() ?? '🍽️',
-              quantity: (r['quantity'] as num?)?.toInt() ?? 0,
-              unit: r['unit']?.toString() ?? 'pcs',
-            ),
-          ),
-        );
-      _persistInventory();
-    } catch (_) {}
-
-    try {
-      // Shopping lists + items
-      final listRows = await DatabaseService.instance.fetchShoppingLists(userId: uid);
-      final bundles = <ShoppingListBundle>[];
-      for (final l in listRows) {
-        final listId = l['id']?.toString() ?? '';
-        final itemsRows = listId.isEmpty
-            ? <Map<String, dynamic>>[]
-            : await DatabaseService.instance.fetchShoppingListItems(listId: listId);
-        final items = itemsRows
-            .map(
-              (r) => ShoppingItem(
+      try {
+        // Inventory
+        final inv = await DatabaseService.instance.fetchInventory(userId: uid);
+        _inventory
+          ..clear()
+          ..addAll(
+            inv.map(
+              (r) => InventoryItem(
                 id: r['id']?.toString() ?? '',
                 name: r['item_name']?.toString() ?? '',
-                amount: r['amount']?.toString() ?? '',
-                recipeId: r['recipe_id']?.toString() ?? (r['source']?.toString() == 'manual' ? 'manual' : 'general'),
-                isBought: (r['is_purchased'] as bool?) ?? false,
+                emoji: r['emoji']?.toString() ?? '🍽️',
+                quantity: (r['quantity'] as num?)?.toInt() ?? 0,
+                unit: r['unit']?.toString() ?? 'pcs',
               ),
-            )
-            .toList(growable: false);
-        bundles.add(
-          ShoppingListBundle(
-            id: listId,
-            name: l['name']?.toString() ?? '—',
-            description: l['description']?.toString() ?? '',
-            items: items,
-          ),
-        );
+            ),
+          );
+        _persistInventory();
+      } catch (_) {
+        hadAnyError = true;
       }
-      _shoppingLists
-        ..clear()
-        ..addAll(bundles);
-      if (_shoppingLists.isNotEmpty) {
-        _preferredShoppingListId ??= _shoppingLists.first.id;
+
+      try {
+        // Shopping lists + items
+        final listRows = await DatabaseService.instance.fetchShoppingLists(userId: uid);
+        final bundles = <ShoppingListBundle>[];
+        for (final l in listRows) {
+          final listId = l['id']?.toString() ?? '';
+          final itemsRows = listId.isEmpty
+              ? <Map<String, dynamic>>[]
+              : await DatabaseService.instance.fetchShoppingListItems(listId: listId);
+          final items = itemsRows
+              .map(
+                (r) => ShoppingItem(
+                  id: r['id']?.toString() ?? '',
+                  name: r['item_name']?.toString() ?? '',
+                  amount: r['amount']?.toString() ?? '',
+                  recipeId: r['recipe_id']?.toString() ?? (r['source']?.toString() == 'manual' ? 'manual' : 'general'),
+                  isBought: (r['is_purchased'] as bool?) ?? false,
+                ),
+              )
+              .toList(growable: false);
+          bundles.add(
+            ShoppingListBundle(
+              id: listId,
+              name: l['name']?.toString() ?? '—',
+              description: l['description']?.toString() ?? '',
+              items: items,
+            ),
+          );
+        }
+        _shoppingLists
+          ..clear()
+          ..addAll(bundles);
+        if (_shoppingLists.isNotEmpty) {
+          _preferredShoppingListId ??= _shoppingLists.first.id;
+        }
+        _persistShoppingLists();
+        _persistPreferredShoppingListId();
+      } catch (_) {
+        hadAnyError = true;
       }
-      _persistShoppingLists();
-      _persistPreferredShoppingListId();
-    } catch (_) {}
 
-    try {
-      // Saved recipes
-      final rows = await DatabaseService.instance.fetchSavedRecipes(userId: uid);
-      _savedRecipeIds
-        ..clear()
-        ..addAll(rows.map((r) => r['recipe_id']?.toString() ?? '').where((s) => s.isNotEmpty));
-      _persistSavedRecipes();
-    } catch (_) {}
+      try {
+        // Saved recipes
+        final rows = await DatabaseService.instance.fetchSavedRecipes(userId: uid);
+        _savedRecipeIds
+          ..clear()
+          ..addAll(rows.map((r) => r['recipe_id']?.toString() ?? '').where((s) => s.isNotEmpty));
+        _persistSavedRecipes();
+      } catch (_) {
+        hadAnyError = true;
+      }
 
-    try {
-      // Ratings
-      final rows = await DatabaseService.instance.fetchRecipeRatings(userId: uid);
-      _recipeRatings
-        ..clear()
-        ..addEntries(
-          rows.map((r) {
-            final id = r['recipe_id']?.toString() ?? '';
-            final rating = (r['rating'] as num?)?.toInt() ?? 0;
-            final comment = r['comment']?.toString() ?? '';
-            return MapEntry(id, RecipeUserRating(rating: rating, comment: comment));
-          }).where((e) => e.key.isNotEmpty && e.value.rating > 0),
-        );
-      _persistRecipeRatings();
-    } catch (_) {}
-
-    notifyListeners();
+      try {
+        // Ratings
+        final rows = await DatabaseService.instance.fetchRecipeRatings(userId: uid);
+        _recipeRatings
+          ..clear()
+          ..addEntries(
+            rows.map((r) {
+              final id = r['recipe_id']?.toString() ?? '';
+              final rating = (r['rating'] as num?)?.toInt() ?? 0;
+              final comment = r['comment']?.toString() ?? '';
+              return MapEntry(id, RecipeUserRating(rating: rating, comment: comment));
+            }).where((e) => e.key.isNotEmpty && e.value.rating > 0),
+          );
+        _persistRecipeRatings();
+      } catch (_) {
+        hadAnyError = true;
+      }
+    } finally {
+      _isSyncingBackend = false;
+      _lastBackendSyncError = hadAnyError ? 'Some data could not be loaded from the server.' : null;
+      notifyListeners();
+    }
   }
 
   Future<void> _persistRecipesCache() async {

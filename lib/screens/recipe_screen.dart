@@ -28,31 +28,49 @@ class _RecipeScreenState extends State<RecipeScreen> {
     'low_carb',
     'quick',
     'dinner',
+    'breakfast',
     'snack',
-  ];
-  static const _freeCollections = [
-    'Vegan Haftası',
-    'Bütçe Dostu',
-    '5 Dakikalık',
+    'balanced',
   ];
   static const _allCollections = [
-    'Vegan Haftası',
-    'Bütçe Dostu',
-    '5 Dakikalık',
+    'Yüksek Protein',
     'Öğle Yemeği',
-    'Kahvaltı',
     'Akşam',
-    'Atıştırmalık',
-    'Tek Tencere',
-    'Protein',
-    'Meze',
+    'Hafif',
     'Çorba',
+    'Vegan Haftası',
+    'Tek Tencere',
+    'Düşük Karbonhidrat',
+    'Hızlı',
+    '5 Dakika',
+    'Öğrenci',
+    'Bütçe Dostu',
+    'Kahvaltı',
+    'Protein',
+    'Atıştırmalık',
+    'Meze',
+    'Meal Prep',
+    'Dengeli Beslenme',
   ];
+  static const _freeCollections = _allCollections;
 
   List<Recipe> _filteredRecipes(AppState appState) {
     final recipes = appState.recipes;
     if (_selectedCategory == 'all') return recipes;
     return recipes.where((r) => r.categoryKey == _selectedCategory).toList();
+  }
+
+  String _emptyRecipeMessage(
+    AppLocalizations l10n,
+    AppState appState,
+  ) {
+    if (appState.recipes.isEmpty) {
+      if (appState.dietaryPreferences.isNotEmpty) {
+        return l10n.recipesNoDietMatch;
+      }
+      return l10n.recipesEmpty;
+    }
+    return l10n.noRecipesInCategory;
   }
 
   @override
@@ -253,16 +271,66 @@ class _RecipeScreenState extends State<RecipeScreen> {
     final l10n = AppLocalizations.of(context)!;
     final availableCollections =
         widget.appState.isPremium ? _allCollections : _freeCollections;
+
+    if (widget.appState.recipesLoading && widget.appState.recipes.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 40),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 20),
+              Text(
+                l10n.recipesLoading,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF757575),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (widget.appState.recipesLoadError != null &&
+        widget.appState.recipes.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 36),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.wifi_off_rounded,
+                  size: 48, color: Theme.of(context).colorScheme.error),
+              const SizedBox(height: 16),
+              Text(
+                l10n.recipesLoadFailed,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF757575),
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 20),
+              FilledButton(
+                onPressed: () => widget.appState.loadRecipes(),
+                child: Text(l10n.retryLoad),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     var recipes = _filteredRecipes(widget.appState);
     if (_selectedCollection != 'all') {
       recipes = recipes
           .where((r) => r.collections.contains(_selectedCollection))
-          .toList(growable: false);
-    }
-    final dietPrefs = widget.appState.dietaryPreferences;
-    if (dietPrefs.isNotEmpty) {
-      recipes = recipes
-          .where((r) => dietPrefs.every((p) => r.dietaryTags.contains(p)))
           .toList(growable: false);
     }
     final savedIds = widget.appState.savedRecipeIds;
@@ -498,7 +566,7 @@ class _RecipeScreenState extends State<RecipeScreen> {
                       onOpenDetail: () => Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (_) => RecipeDetailScreen(
-                            recipe: recipe,
+                            recipeId: recipe.id,
                             appState: widget.appState,
                           ),
                         ),
@@ -522,7 +590,8 @@ class _RecipeScreenState extends State<RecipeScreen> {
                   const Text('🍽️', style: TextStyle(fontSize: 48)),
                   const SizedBox(height: 12),
                   Text(
-                    l10n.noRecipesInCategory,
+                    _emptyRecipeMessage(l10n, widget.appState),
+                    textAlign: TextAlign.center,
                     style: const TextStyle(
                       color: Color(0xFF9E9E9E),
                       fontSize: 15,
@@ -548,7 +617,7 @@ class _RecipeScreenState extends State<RecipeScreen> {
                       onOpenDetail: () => Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (_) => RecipeDetailScreen(
-                            recipe: recipe,
+                            recipeId: recipe.id,
                             appState: widget.appState,
                           ),
                         ),

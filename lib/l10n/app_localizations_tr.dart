@@ -142,6 +142,27 @@ class AppLocalizationsTr extends AppLocalizations {
   String get noRecipesInCategory => 'Bu kategoride tarif yok';
 
   @override
+  String get recipesLoading => 'Tarifler Yükleniyor...';
+
+  @override
+  String get recipesLoadFailed => 'Tarifler yüklenemedi, lütfen tekrar deneyin';
+
+  @override
+  String get recipesEmpty => 'Henüz tarif yok';
+
+  @override
+  String get recipesNoDietMatch => 'Beslenme tercihlerine uygun hiç tarif yok';
+
+  @override
+  String get retryLoad => 'Tekrar Dene';
+
+  @override
+  String get premiumRecipeCreateHint => 'Premium\'da kendi tarifini oluştur';
+
+  @override
+  String get categoryBalanced => 'Dengeli';
+
+  @override
   String prepTimeMin(int n) {
     return '$n dk';
   }
@@ -210,7 +231,13 @@ class AppLocalizationsTr extends AppLocalizations {
   String get difficultyEasy => 'Kolay';
 
   @override
+  String get difficultyVeryEasy => 'Çok Kolay';
+
+  @override
   String get difficultyMedium => 'Orta';
+
+  @override
+  String get difficultyHard => 'Zor';
 
   @override
   String get dietHighProtein => 'Yüksek protein';
@@ -826,6 +853,21 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get ingParsley => 'Maydanoz';
+
+  @override
+  String get ingBroccoli => 'Brokoli';
+
+  @override
+  String get ingMilk => 'Süt';
+
+  @override
+  String get ingBread => 'Ekmek';
+
+  @override
+  String get ingBanana => 'Muz';
+
+  @override
+  String get ingApple => 'Elma';
 
   @override
   String get amtToTaste => 'İsteğe göre';

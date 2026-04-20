@@ -12,11 +12,17 @@ class Nutrition {
   });
 
   factory Nutrition.fromJson(Map<String, Object?> json) {
+    final protein = (json['protein'] as num?)?.toInt() ?? 0;
+    final carbs = (json['carbs'] as num?)?.toInt() ?? 0;
+    final fat = (json['fat'] as num?)?.toInt() ?? 0;
+    final explicit = (json['calories'] as num?)?.toInt();
+    final calories = explicit ??
+        (protein * 4 + carbs * 4 + fat * 9).round();
     return Nutrition(
-      calories: (json['calories'] as num?)?.toInt() ?? 0,
-      protein: (json['protein'] as num?)?.toInt() ?? 0,
-      carbs: (json['carbs'] as num?)?.toInt() ?? 0,
-      fat: (json['fat'] as num?)?.toInt() ?? 0,
+      calories: calories,
+      protein: protein,
+      carbs: carbs,
+      fat: fat,
     );
   }
 
@@ -97,13 +103,29 @@ class Recipe {
     final dietaryTagsJson = json['dietaryTags'] ?? json['dietary_tags'];
     final macrosJson = json['macros'] ?? json['nutrition'];
 
-    final ingredients = (ingredientsJson is List)
-        ? ingredientsJson
+    final List<RecipeIngredient> ingredients;
+    if (ingredientsJson is List) {
+      if (ingredientsJson.isNotEmpty && ingredientsJson.first is String) {
+        ingredients = ingredientsJson
+            .whereType<String>()
+            .map(
+              (s) => RecipeIngredient(
+                name: s,
+                amount: '',
+                isAvailable: true,
+              ),
+            )
+            .toList(growable: false);
+      } else {
+        ingredients = ingredientsJson
             .whereType<Map>()
             .map((m) => Map<String, Object?>.from(m))
             .map(RecipeIngredient.fromJson)
-            .toList(growable: false)
-        : const <RecipeIngredient>[];
+            .toList(growable: false);
+      }
+    } else {
+      ingredients = const <RecipeIngredient>[];
+    }
 
     final steps = (stepsJson is List)
         ? stepsJson.whereType<String>().toList(growable: false)

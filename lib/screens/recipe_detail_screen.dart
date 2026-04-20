@@ -7,18 +7,72 @@ import '../models/recipe_user_rating.dart';
 import '../app_state.dart';
 import '../widgets/premium_feature_modal.dart';
 
-class RecipeDetailScreen extends StatelessWidget {
-  final Recipe recipe;
+class RecipeDetailScreen extends StatefulWidget {
+  final String recipeId;
   final AppState appState;
 
   const RecipeDetailScreen({
     super.key,
-    required this.recipe,
+    required this.recipeId,
     required this.appState,
   });
 
+  @override
+  State<RecipeDetailScreen> createState() => _RecipeDetailScreenState();
+}
+
+class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
+  Recipe? _recipe;
+  bool _loading = true;
+  bool _loadFailed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _primeOrLoad();
+  }
+
+  Future<void> _primeOrLoad() async {
+    for (final r in widget.appState.recipes) {
+      if (r.id == widget.recipeId) {
+        if (mounted) {
+          setState(() {
+            _recipe = r;
+            _loading = false;
+          });
+        }
+        return;
+      }
+    }
+    await _fetch();
+  }
+
+  Future<void> _fetch() async {
+    setState(() {
+      _loading = true;
+      _loadFailed = false;
+    });
+    try {
+      final r = await widget.appState.fetchRecipeById(widget.recipeId);
+      if (!mounted) return;
+      setState(() {
+        _recipe = r;
+        _loadFailed = r == null;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _recipe = null;
+        _loadFailed = true;
+        _loading = false;
+      });
+    }
+  }
+
   void _openRatingSheet(BuildContext context, AppLocalizations l10n) {
-    final existing = appState.ratingForRecipe(recipe.id);
+    final recipe = _recipe!;
+    final existing = widget.appState.ratingForRecipe(recipe.id);
     var selected = existing?.rating ?? 0;
     final ctrl = TextEditingController(text: existing?.comment ?? '');
 
@@ -97,7 +151,7 @@ class RecipeDetailScreen extends StatelessWidget {
                       if (existing != null) ...[
                         TextButton(
                           onPressed: () async {
-                            await appState.removeRecipeRating(recipe.id);
+                            await widget.appState.removeRecipeRating(recipe.id);
                             if (ctx.mounted) Navigator.pop(ctx);
                           },
                           style: TextButton.styleFrom(
@@ -122,7 +176,7 @@ class RecipeDetailScreen extends StatelessWidget {
                         onPressed: selected == 0
                             ? null
                             : () async {
-                                await appState.setRecipeRating(
+                                await widget.appState.setRecipeRating(
                                   recipe.id,
                                   rating: selected,
                                   comment: ctrl.text,
@@ -143,6 +197,7 @@ class RecipeDetailScreen extends StatelessWidget {
   }
 
   Future<void> _selectRecipe(BuildContext context) async {
+    final recipe = _recipe!;
     final missing = recipe.ingredients.where((i) => !i.isAvailable).toList();
 
     if (missing.isEmpty) {
@@ -163,10 +218,10 @@ class RecipeDetailScreen extends StatelessWidget {
         )
         .toList();
 
-    final lists = appState.shoppingLists;
+    final lists = widget.appState.shoppingLists;
     if (lists.length <= 1) {
-      final id = appState.defaultTargetListId ?? lists.first.id;
-      await appState.addShoppingItems(id, newItems);
+      final id = widget.appState.defaultTargetListId ?? lists.first.id;
+      await widget.appState.addShoppingItems(id, newItems);
       if (!context.mounted) return;
       _showConfirmationSheet(context, addedCount: missing.length);
       return;
@@ -181,7 +236,7 @@ class RecipeDetailScreen extends StatelessWidget {
     int missingCount,
   ) {
     final l10n = AppLocalizations.of(context)!;
-    var selectedId = appState.defaultTargetListId ?? appState.shoppingLists.first.id;
+    var selectedId = widget.appState.defaultTargetListId ?? widget.appState.shoppingLists.first.id;
 
     showModalBottomSheet<void>(
       context: context,
@@ -210,7 +265,7 @@ class RecipeDetailScreen extends StatelessWidget {
                         ),
                       ),
                     ),
-                    ...appState.shoppingLists.map(
+                    ...widget.appState.shoppingLists.map(
                       (list) => RadioListTile<String>(
                         title: Text(
                           list.name,
@@ -236,8 +291,8 @@ class RecipeDetailScreen extends StatelessWidget {
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                       child: ElevatedButton(
                         onPressed: () {
-                          appState.setPreferredShoppingList(selectedId);
-                          appState.addShoppingItems(selectedId, newItems);
+                          widget.appState.setPreferredShoppingList(selectedId);
+                          widget.appState.addShoppingItems(selectedId, newItems);
                           Navigator.of(ctx).pop();
                           _showConfirmationSheet(context, addedCount: missingCount);
                         },
@@ -255,6 +310,7 @@ class RecipeDetailScreen extends StatelessWidget {
   }
 
   void _showConfirmationSheet(BuildContext context, {required int addedCount}) {
+    final recipe = _recipe!;
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -269,15 +325,85 @@ class RecipeDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    if (_loading && _recipe == null) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFF5F7FA),
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 19),
+            color: const Color(0xFF1A1A2E),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          title: Text(l10n.recipeSuggestions),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text(
+                l10n.recipesLoading,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF757575),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    if ((_loadFailed || _recipe == null) && !_loading) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFF5F7FA),
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 19),
+            color: const Color(0xFF1A1A2E),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          title: Text(l10n.recipeSuggestions),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  l10n.recipesLoadFailed,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF757575),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                FilledButton(
+                  onPressed: _fetch,
+                  child: Text(l10n.retryLoad),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    final recipe = _recipe!;
     final missingCount = recipe.missingCount;
     final title = recipe.name;
     final category = l10n.categoryLabel(recipe.categoryKey);
     final time = l10n.prepTimeMin(recipe.prepTimeMinutes);
     final difficulty = l10n.difficultyLabel(recipe.difficulty);
 
-    final RecipeUserRating? myRating = appState.ratingForRecipe(recipe.id);
+    final RecipeUserRating? myRating = widget.appState.ratingForRecipe(recipe.id);
 
-    if (recipe.isPremium && !appState.isPremium) {
+    if (recipe.isPremium && !widget.appState.isPremium) {
       return Scaffold(
         backgroundColor: const Color(0xFFF5F7FA),
         appBar: AppBar(
@@ -322,7 +448,7 @@ class RecipeDetailScreen extends StatelessWidget {
                   child: ElevatedButton(
                     onPressed: () => showPremiumFeatureModal(
                       context,
-                      appState: appState,
+                      appState: widget.appState,
                       description: l10n.premiumFeatureDefaultBody,
                     ),
                     style: ElevatedButton.styleFrom(
@@ -366,7 +492,7 @@ class RecipeDetailScreen extends StatelessWidget {
             actions: [
               IconButton(
                 onPressed: () async {
-                  final ok = await appState.toggleSavedRecipe(recipe.id);
+                  final ok = await widget.appState.toggleSavedRecipe(recipe.id);
                   if (!ok && context.mounted) {
                     await showPremiumSavedLimitModal(context);
                   }
@@ -376,11 +502,11 @@ class RecipeDetailScreen extends StatelessWidget {
                   transitionBuilder: (child, anim) =>
                       ScaleTransition(scale: anim, child: child),
                   child: Icon(
-                    appState.isRecipeSaved(recipe.id)
+                    widget.appState.isRecipeSaved(recipe.id)
                         ? Icons.favorite_rounded
                         : Icons.favorite_border_rounded,
-                    key: ValueKey(appState.isRecipeSaved(recipe.id)),
-                    color: appState.isRecipeSaved(recipe.id)
+                    key: ValueKey(widget.appState.isRecipeSaved(recipe.id)),
+                    color: widget.appState.isRecipeSaved(recipe.id)
                         ? const Color(0xFFE53935)
                         : const Color(0xFF1A1A2E),
                   ),
@@ -780,22 +906,46 @@ class RecipeDetailScreen extends StatelessWidget {
         child: Container(
           color: Colors.white,
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-          child: SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: () => _selectRecipe(context),
-              icon: Icon(
-                missingCount > 0
-                    ? Icons.shopping_cart_outlined
-                    : Icons.check_circle_outline_rounded,
-                size: 20,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (widget.appState.isPremium)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(l10n.featAiRecipeCreate),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.psychology_rounded, size: 20),
+                      label: Text(l10n.featAiRecipeCreate),
+                    ),
+                  ),
+                ),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => _selectRecipe(context),
+                  icon: Icon(
+                    missingCount > 0
+                        ? Icons.shopping_cart_outlined
+                        : Icons.check_circle_outline_rounded,
+                    size: 20,
+                  ),
+                  label: Text(
+                    missingCount > 0
+                        ? l10n.selectRecipeWithMissing(missingCount)
+                        : l10n.selectRecipe,
+                  ),
+                ),
               ),
-              label: Text(
-                missingCount > 0
-                    ? l10n.selectRecipeWithMissing(missingCount)
-                    : l10n.selectRecipe,
-              ),
-            ),
+            ],
           ),
         ),
       ),

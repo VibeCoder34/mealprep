@@ -188,52 +188,158 @@ class _MainScaffoldState extends State<MainScaffold> {
       ),
       SettingsScreen(
         appState: _appState,
-        localeController: widget.localeController,
         settings: widget.settings,
         session: widget.session,
         onLogout: widget.onLogout,
       ),
     ];
 
-    return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: screens,
-      ),
-      bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          border: Border(top: BorderSide(color: Color(0xFFF0F0F0), width: 1)),
-        ),
-        child: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          onTap: _navigateToTab,
-          backgroundColor: Colors.white,
-          elevation: 0,
-          items: [
-            BottomNavigationBarItem(
-              icon: const Icon(Icons.kitchen_outlined),
-              activeIcon: const Icon(Icons.kitchen_rounded),
-              label: l10n.navPantry,
+    return ListenableBuilder(
+      listenable: _appState,
+      builder: (context, _) {
+        final isSyncing = _appState.isSyncingBackend;
+        final syncError = _appState.lastBackendSyncError;
+        final colorScheme = Theme.of(context).colorScheme;
+        final maxBannerWidth = MediaQuery.sizeOf(context).width - 24;
+
+        return Stack(
+          children: [
+            Scaffold(
+              body: IndexedStack(
+                index: _currentIndex,
+                children: screens,
+              ),
+              bottomNavigationBar: Container(
+                decoration: BoxDecoration(
+                  color: colorScheme.surface,
+                  border: Border(
+                    top: BorderSide(
+                      color: colorScheme.outline.withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.6 : 0.35),
+                      width: 1,
+                    ),
+                  ),
+                ),
+                child: BottomNavigationBar(
+                  currentIndex: _currentIndex,
+                  onTap: _navigateToTab,
+                  backgroundColor: colorScheme.surface,
+                  elevation: 0,
+                  items: [
+                    BottomNavigationBarItem(
+                      icon: const Icon(Icons.kitchen_outlined),
+                      activeIcon: const Icon(Icons.kitchen_rounded),
+                      label: l10n.navPantry,
+                    ),
+                    BottomNavigationBarItem(
+                      icon: const Icon(Icons.menu_book_outlined),
+                      activeIcon: const Icon(Icons.menu_book_rounded),
+                      label: l10n.navRecipes,
+                    ),
+                    BottomNavigationBarItem(
+                      icon: const Icon(Icons.shopping_cart_outlined),
+                      activeIcon: const Icon(Icons.shopping_cart_rounded),
+                      label: l10n.navShopping,
+                    ),
+                    BottomNavigationBarItem(
+                      icon: const Icon(Icons.settings_outlined),
+                      activeIcon: const Icon(Icons.settings_rounded),
+                      label: l10n.navSettings,
+                    ),
+                  ],
+                ),
+              ),
             ),
-            BottomNavigationBarItem(
-              icon: const Icon(Icons.menu_book_outlined),
-              activeIcon: const Icon(Icons.menu_book_rounded),
-              label: l10n.navRecipes,
-            ),
-            BottomNavigationBarItem(
-              icon: const Icon(Icons.shopping_cart_outlined),
-              activeIcon: const Icon(Icons.shopping_cart_rounded),
-              label: l10n.navShopping,
-            ),
-            BottomNavigationBarItem(
-              icon: const Icon(Icons.settings_outlined),
-              activeIcon: const Icon(Icons.settings_rounded),
-              label: l10n.navSettings,
-            ),
+            if (isSyncing)
+              Positioned.fill(
+                child: IgnorePointer(
+                  ignoring: true,
+                  child: AnimatedOpacity(
+                    opacity: 1,
+                    duration: const Duration(milliseconds: 150),
+                    child: Container(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      alignment: Alignment.topCenter,
+                      padding: const EdgeInsets.only(top: 48),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.surface,
+                          borderRadius: BorderRadius.circular(999),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x22000000),
+                              blurRadius: 14,
+                              offset: Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(maxWidth: maxBannerWidth),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                              const SizedBox(width: 10),
+                              Flexible(
+                                child: Text(
+                                  'Yükleniyor...',
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            if (!isSyncing && syncError != null)
+              SafeArea(
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Material(
+                      elevation: 6,
+                      borderRadius: BorderRadius.circular(14),
+                      color: Theme.of(context).colorScheme.surface,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(maxWidth: maxBannerWidth),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(Icons.wifi_off_rounded, color: Theme.of(context).colorScheme.error),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  syncError,
+                                  maxLines: 3,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              TextButton(
+                                onPressed: () => _appState.refreshFromBackend(),
+                                child: const Text('Tekrar Dene'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
           ],
-        ),
-      ),
+        );
+      },
     );
   }
 }

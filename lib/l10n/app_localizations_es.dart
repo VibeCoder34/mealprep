@@ -143,6 +143,29 @@ class AppLocalizationsEs extends AppLocalizations {
   String get noRecipesInCategory => 'No hay recetas en esta categoría';
 
   @override
+  String get recipesLoading => 'Cargando recetas…';
+
+  @override
+  String get recipesLoadFailed =>
+      'No se pudieron cargar las recetas. Inténtalo de nuevo.';
+
+  @override
+  String get recipesEmpty => 'Aún no hay recetas';
+
+  @override
+  String get recipesNoDietMatch =>
+      'Ninguna receta coincide con tus preferencias';
+
+  @override
+  String get retryLoad => 'Reintentar';
+
+  @override
+  String get premiumRecipeCreateHint => 'Crea tu propia receta con Premium';
+
+  @override
+  String get categoryBalanced => 'Equilibrada';
+
+  @override
   String prepTimeMin(int n) {
     return '$n min';
   }
@@ -211,7 +234,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get difficultyEasy => 'Fácil';
 
   @override
+  String get difficultyVeryEasy => 'Muy fácil';
+
+  @override
   String get difficultyMedium => 'Medio';
+
+  @override
+  String get difficultyHard => 'Difícil';
 
   @override
   String get dietHighProtein => 'Alta proteína';
@@ -831,6 +860,21 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get ingParsley => 'Perejil';
+
+  @override
+  String get ingBroccoli => 'Brócoli';
+
+  @override
+  String get ingMilk => 'Leche';
+
+  @override
+  String get ingBread => 'Pan';
+
+  @override
+  String get ingBanana => 'Plátano';
+
+  @override
+  String get ingApple => 'Manzana';
 
   @override
   String get amtToTaste => 'Al gusto';

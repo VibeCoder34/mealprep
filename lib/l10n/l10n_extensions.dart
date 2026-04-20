@@ -133,6 +133,16 @@ extension MealPrepL10nX on AppLocalizations {
         return ingCucumber;
       case 'Parsley':
         return ingParsley;
+      case 'Broccoli':
+        return ingBroccoli;
+      case 'Milk':
+        return ingMilk;
+      case 'Bread':
+        return ingBread;
+      case 'Banana':
+        return ingBanana;
+      case 'Apple':
+        return ingApple;
       default:
         return englishName;
     }
@@ -181,6 +191,8 @@ extension MealPrepL10nX on AppLocalizations {
         return categoryDinner;
       case 'snack':
         return categorySnack;
+      case 'balanced':
+        return categoryBalanced;
       case 'high_protein':
         return categoryHighProtein;
       case 'vegan':
@@ -228,10 +240,14 @@ extension MealPrepL10nX on AppLocalizations {
   /// Localized difficulty label; [difficulty] is Turkish from data ("Kolay", "Orta").
   String difficultyLabel(String difficulty) {
     switch (difficulty) {
+      case 'Çok Kolay':
+        return difficultyVeryEasy;
       case 'Kolay':
         return difficultyEasy;
       case 'Orta':
         return difficultyMedium;
+      case 'Zor':
+        return difficultyHard;
       default:
         return difficulty;
     }
