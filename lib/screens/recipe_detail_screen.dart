@@ -6,6 +6,9 @@ import '../models/shopping_item.dart';
 import '../models/recipe_user_rating.dart';
 import '../app_state.dart';
 import '../widgets/premium_feature_modal.dart';
+import '../services/ingredient_normalizer.dart';
+import '../services/shopping_ingredient_formatter.dart';
+import 'cooking_steps_screen.dart';
 
 class RecipeDetailScreen extends StatefulWidget {
   final String recipeId;
@@ -25,6 +28,8 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
   Recipe? _recipe;
   bool _loading = true;
   bool _loadFailed = false;
+  final IngredientNormalizer _normalizer = const IngredientNormalizer();
+  final ShoppingIngredientFormatter _shoppingFmt = const ShoppingIngredientFormatter();
 
   @override
   void initState() {
@@ -201,42 +206,76 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
     final missing = recipe.ingredients.where((i) => !i.isAvailable).toList();
 
     if (missing.isEmpty) {
-      _showConfirmationSheet(context, addedCount: 0);
+      _openCookingSteps();
       return;
     }
 
-    final newItems = missing
+    List<ShoppingItem> buildItems({required bool includeSpices}) {
+      return missing
         .asMap()
         .entries
-        .map(
-          (e) => ShoppingItem(
+        .map((e) {
+          final shoppingName = _shoppingFmt.toShoppingName(
+            e.value.name,
+            includePantryOrSpice: includeSpices,
+          );
+          if (shoppingName == null) return null;
+          return ShoppingItem(
             id: 'recipe_${recipe.id}_${e.key}_${DateTime.now().millisecondsSinceEpoch}',
-            name: e.value.name,
-            amount: e.value.amount,
+            name: shoppingName,
+            // Shopping list is a checklist; purchase quantity is decided at "bought" time.
+            amount: '',
             recipeId: recipe.id,
-          ),
-        )
-        .toList();
+            recipeName: recipe.name,
+          );
+        })
+        .whereType<ShoppingItem>()
+        .toList(growable: false);
+    }
+
+    final itemsWithoutSpices = buildItems(includeSpices: false);
+    final itemsWithSpices = buildItems(includeSpices: true);
 
     final lists = widget.appState.shoppingLists;
-    if (lists.length <= 1) {
-      final id = widget.appState.defaultTargetListId ?? lists.first.id;
-      await widget.appState.addShoppingItems(id, newItems);
+    if (lists.isEmpty) {
+      // Shouldn't happen (app normally keeps at least one list), but fail safe:
+      // add to a best-effort default and show confirmation.
+      final fallbackId = widget.appState.defaultTargetListId ?? 'default';
+      await widget.appState.addShoppingItems(fallbackId, itemsWithoutSpices);
       if (!context.mounted) return;
-      _showConfirmationSheet(context, addedCount: missing.length);
+      _openCookingSteps();
       return;
     }
 
-    _showPickShoppingListSheet(context, newItems, missing.length);
+    // Always allow the user to choose the target list (even if there's only one).
+    _showPickShoppingListSheet(
+      context,
+      itemsWithoutSpices: itemsWithoutSpices,
+      itemsWithSpices: itemsWithSpices,
+    );
+  }
+
+  void _openCookingSteps() {
+    final r = _recipe;
+    if (r == null) return;
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => CookingStepsScreen(
+          recipeId: r.id,
+          appState: widget.appState,
+        ),
+      ),
+    );
   }
 
   void _showPickShoppingListSheet(
     BuildContext context,
-    List<ShoppingItem> newItems,
-    int missingCount,
+    {required List<ShoppingItem> itemsWithoutSpices,
+    required List<ShoppingItem> itemsWithSpices}
   ) {
     final l10n = AppLocalizations.of(context)!;
     var selectedId = widget.appState.defaultTargetListId ?? widget.appState.shoppingLists.first.id;
+    var includeSpices = false;
 
     showModalBottomSheet<void>(
       context: context,
@@ -247,78 +286,141 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
       builder: (ctx) {
         return StatefulBuilder(
           builder: (context, setModalState) {
+            Future<void> createNewListAndAdd() async {
+              var createdId = '';
+
+              final res = await showDialog<_NewListResult?>(
+                context: ctx,
+                builder: (dctx) => _CreateShoppingListDialog(
+                  cancelLabel: l10n.cancel,
+                  title: 'Yeni liste oluştur',
+                  createLabel: 'Oluştur',
+                ),
+              );
+
+              if (res == null) return; // cancelled
+              final name = res.name.trim();
+              if (name.isEmpty) return;
+
+              createdId = await widget.appState.createShoppingList(
+                name: name,
+                description: res.description.trim(),
+              );
+
+              if (createdId.isEmpty) return;
+
+              final chosen = includeSpices ? itemsWithSpices : itemsWithoutSpices;
+              widget.appState.setPreferredShoppingList(createdId);
+              await widget.appState.addShoppingItems(createdId, chosen);
+              if (!mounted) return;
+              if (ctx.mounted) Navigator.of(ctx).pop(); // close picker sheet
+              await Future<void>.delayed(Duration.zero);
+              _openCookingSteps();
+            }
+
             return SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(8, 12, 8, 24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      child: Text(
-                        l10n.chooseListForRecipe,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF1A1A2E),
-                        ),
-                      ),
-                    ),
-                    ...widget.appState.shoppingLists.map(
-                      (list) => RadioListTile<String>(
-                        title: Text(
-                          list.name,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        subtitle: list.description.trim().isEmpty
-                            ? null
-                            : Text(
-                                list.description.trim(),
-                                maxLines: 1,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final maxH = constraints.maxHeight;
+                  // Keep a consistent sheet height; allow internal scrolling for long content.
+                  final sheetH = (maxH * 0.78).clamp(320.0, maxH);
+                  return SizedBox(
+                    height: sheetH,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(8, 12, 8, 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            child: Text(
+                              l10n.chooseListForRecipe,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF1A1A2E),
+                              ),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                            child: CheckboxListTile(
+                              value: includeSpices,
+                              onChanged: (v) => setModalState(() => includeSpices = v ?? false),
+                              contentPadding: EdgeInsets.zero,
+                              dense: true,
+                              controlAffinity: ListTileControlAffinity.leading,
+                              title: const Text('Baharatları da ekle'),
+                              subtitle: const Text(
+                                'Tuz/karabiber/kimyon gibi temel baharatlar da listeye eklensin.',
+                                maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                               ),
-                        value: list.id,
-                        groupValue: selectedId,
-                        activeColor: const Color(0xFF00ACC1),
-                        onChanged: (v) {
-                          if (v == null) return;
-                          setModalState(() => selectedId = v);
-                        },
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                            child: OutlinedButton.icon(
+                              onPressed: createNewListAndAdd,
+                              icon: const Icon(Icons.add_rounded, size: 18),
+                              label: const Text('Yeni liste oluştur'),
+                              style: OutlinedButton.styleFrom(
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: ListView.builder(
+                              padding: const EdgeInsets.fromLTRB(8, 0, 8, 0),
+                              itemCount: widget.appState.shoppingLists.length,
+                              itemBuilder: (context, i) {
+                                final list = widget.appState.shoppingLists[i];
+                                return RadioListTile<String>(
+                                  title: Text(
+                                    list.name,
+                                    style: const TextStyle(fontWeight: FontWeight.w600),
+                                  ),
+                                  subtitle: list.description.trim().isEmpty
+                                      ? null
+                                      : Text(
+                                          list.description.trim(),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                  value: list.id,
+                                  groupValue: selectedId,
+                                  activeColor: const Color(0xFF00ACC1),
+                                  onChanged: (v) {
+                                    if (v == null) return;
+                                    setModalState(() => selectedId = v);
+                                  },
+                                );
+                              },
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                            child: ElevatedButton(
+                              onPressed: () {
+                                final chosen = includeSpices ? itemsWithSpices : itemsWithoutSpices;
+                                widget.appState.setPreferredShoppingList(selectedId);
+                                widget.appState.addShoppingItems(selectedId, chosen);
+                                Navigator.of(ctx).pop();
+                                Future<void>.delayed(Duration.zero).then((_) => _openCookingSteps());
+                              },
+                              child: Text(l10n.confirmAddToList),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                      child: ElevatedButton(
-                        onPressed: () {
-                          widget.appState.setPreferredShoppingList(selectedId);
-                          widget.appState.addShoppingItems(selectedId, newItems);
-                          Navigator.of(ctx).pop();
-                          _showConfirmationSheet(context, addedCount: missingCount);
-                        },
-                        child: Text(l10n.confirmAddToList),
-                      ),
-                    ),
-                  ],
-                ),
+                  );
+                },
               ),
             );
           },
         );
       },
-    );
-  }
-
-  void _showConfirmationSheet(BuildContext context, {required int addedCount}) {
-    final recipe = _recipe!;
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (_) => _RecipeSelectedSheet(
-        recipe: recipe,
-        addedCount: addedCount,
-      ),
     );
   }
 
@@ -328,31 +430,115 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
     if (_loading && _recipe == null) {
       return Scaffold(
         backgroundColor: const Color(0xFFF5F7FA),
-        appBar: AppBar(
-          backgroundColor: Colors.white,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 19),
-            color: const Color(0xFF1A1A2E),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-          title: Text(l10n.recipeSuggestions),
-        ),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const CircularProgressIndicator(),
-              const SizedBox(height: 16),
-              Text(
-                l10n.recipesLoading,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF757575),
+        body: CustomScrollView(
+          slivers: [
+            SliverAppBar(
+              backgroundColor: Colors.white,
+              elevation: 0,
+              scrolledUnderElevation: 1,
+              surfaceTintColor: Colors.transparent,
+              pinned: true,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 19),
+                color: const Color(0xFF1A1A2E),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+              title: Container(
+                width: 180,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0F0F0),
+                  borderRadius: BorderRadius.circular(999),
                 ),
               ),
-            ],
-          ),
+            ),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      height: 120,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: const Color(0xFFF0F0F0)),
+                      ),
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 64,
+                            height: 64,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF5F7FA),
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(color: const Color(0xFFF0F0F0)),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Container(
+                                  height: 18,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF0F0F0),
+                                    borderRadius: BorderRadius.circular(999),
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: [
+                                    for (var i = 0; i < 3; i++)
+                                      Container(
+                                        width: 86,
+                                        height: 28,
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFF5F7FA),
+                                          borderRadius: BorderRadius.circular(20),
+                                          border: Border.all(color: const Color(0xFFF0F0F0)),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Container(
+                      height: 160,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: const Color(0xFFF0F0F0)),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Center(
+                      child: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.4,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       );
     }
@@ -397,11 +583,13 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
     final recipe = _recipe!;
     final missingCount = recipe.missingCount;
     final title = recipe.name;
-    final category = l10n.categoryLabel(recipe.categoryKey);
+    final category = l10n.categoryLabel(recipe.category);
     final time = l10n.prepTimeMin(recipe.prepTimeMinutes);
     final difficulty = l10n.difficultyLabel(recipe.difficulty);
+    final imageUrl = recipe.imageUrl;
 
     final RecipeUserRating? myRating = widget.appState.ratingForRecipe(recipe.id);
+    final match = _computeMatch(recipe);
 
     if (recipe.isPremium && !widget.appState.isPremium) {
       return Scaffold(
@@ -527,8 +715,39 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                     children: [
                       Row(
                         children: [
-                          Text(recipe.emoji,
-                              style: const TextStyle(fontSize: 52)),
+                          Container(
+                            width: 64,
+                            height: 64,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF5F7FA),
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(color: const Color(0xFFF0F0F0)),
+                            ),
+                            child: (imageUrl != null && imageUrl.trim().isNotEmpty)
+                                ? ClipRRect(
+                                    borderRadius: BorderRadius.circular(18),
+                                    child: Image.network(
+                                      imageUrl,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) => Center(
+                                        child: Text(recipe.emoji, style: const TextStyle(fontSize: 40)),
+                                      ),
+                                      loadingBuilder: (context, child, progress) {
+                                        if (progress == null) return child;
+                                        return const Center(
+                                          child: SizedBox(
+                                            width: 18,
+                                            height: 18,
+                                            child: CircularProgressIndicator(strokeWidth: 2),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  )
+                                : Center(
+                                    child: Text(recipe.emoji, style: const TextStyle(fontSize: 40)),
+                                  ),
+                          ),
                           const SizedBox(width: 16),
                           Expanded(
                             child: Column(
@@ -543,23 +762,44 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                                     letterSpacing: -0.5,
                                   ),
                                 ),
+                                const SizedBox(height: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF5F7FA),
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(color: const Color(0xFFF0F0F0)),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.inventory_2_rounded, size: 16, color: Color(0xFF00ACC1)),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          match.missingNames.isEmpty
+                                              ? '${match.matchPercent}% · ${l10n.matchPerfectShort}'
+                                              : '${match.matchPercent}% · ${l10n.matchNeedPrefix} ${match.missingNames.join(', ')}',
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            fontSize: 12.5,
+                                            fontWeight: FontWeight.w600,
+                                            color: Color(0xFF424242),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                                 const SizedBox(height: 6),
-                                Row(
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
                                   children: [
-                                    _MetaChip(
-                                      icon: Icons.schedule_rounded,
-                                      label: time,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    _MetaChip(
-                                      icon: Icons.restaurant_rounded,
-                                      label: category,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    _MetaChip(
-                                      icon: Icons.trending_up_rounded,
-                                      label: difficulty,
-                                    ),
+                                    _MetaChip(icon: Icons.schedule_rounded, label: time),
+                                    _MetaChip(icon: Icons.restaurant_rounded, label: category),
+                                    _MetaChip(icon: Icons.trending_up_rounded, label: difficulty),
+                                    _MetaChip(icon: Icons.people_alt_rounded, label: '${recipe.servings}×'),
                                   ],
                                 ),
                                 if (recipe.collections.isNotEmpty) ...[
@@ -909,25 +1149,6 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (widget.appState.isPremium)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(l10n.featAiRecipeCreate),
-                            behavior: SnackBarBehavior.floating,
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.psychology_rounded, size: 20),
-                      label: Text(l10n.featAiRecipeCreate),
-                    ),
-                  ),
-                ),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
@@ -951,127 +1172,124 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
       ),
     );
   }
+
+  _MatchSummary _computeMatch(Recipe recipe) {
+    final inv = widget.appState.inventory
+        .map((i) => _normalizer.normalize(i.name))
+        .where((s) => s.isNotEmpty)
+        .toSet();
+
+    final normalizedRecipe = recipe.ingredients
+        .map((i) => _normalizer.normalize(i.name))
+        .where((s) => s.isNotEmpty)
+        .toList(growable: false);
+
+    final total = normalizedRecipe.length;
+    var matched = 0;
+    final missing = <String>[];
+
+    for (final ing in recipe.ingredients) {
+      final key = _normalizer.normalize(ing.name);
+      if (key.isEmpty) continue;
+      if (inv.contains(key)) {
+        matched += 1;
+      } else {
+        missing.add(ing.name);
+      }
+    }
+
+    final pct = total == 0 ? 0 : ((matched / total) * 100).round();
+    return _MatchSummary(matchPercent: pct, missingNames: missing.take(3).toList(growable: false));
+  }
 }
 
-class _RecipeSelectedSheet extends StatelessWidget {
-  final Recipe recipe;
-  final int addedCount;
+class _NewListResult {
+  final String name;
+  final String description;
+  const _NewListResult({required this.name, required this.description});
+}
 
-  const _RecipeSelectedSheet({
-    required this.recipe,
-    required this.addedCount,
+class _CreateShoppingListDialog extends StatefulWidget {
+  final String title;
+  final String cancelLabel;
+  final String createLabel;
+  const _CreateShoppingListDialog({
+    required this.title,
+    required this.cancelLabel,
+    required this.createLabel,
   });
 
   @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final allAvailable = addedCount == 0;
-    final rName = recipe.name;
+  State<_CreateShoppingListDialog> createState() => _CreateShoppingListDialogState();
+}
 
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-      padding: const EdgeInsets.fromLTRB(24, 28, 24, 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(28),
-      ),
-      child: SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 36,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 20),
-              decoration: BoxDecoration(
-                color: const Color(0xFFE0E0E0),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            Text(
-              allAvailable ? '✅' : '🛒',
-              style: const TextStyle(fontSize: 52),
-            ),
-            const SizedBox(height: 14),
-            Text(
-              allAvailable ? l10n.sheetReadyTitle : l10n.sheetSelectedTitle,
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF1A1A2E),
-                letterSpacing: -0.5,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              allAvailable
-                  ? l10n.sheetReadyBody(rName)
-                  : l10n.sheetAddedBody(addedCount, rName),
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 15,
-                color: Color(0xFF9E9E9E),
-                height: 1.5,
-              ),
-            ),
-            const SizedBox(height: 28),
-            if (!allAvailable) ...[
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF5F7FA),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Column(
-                  children: recipe.ingredients
-                      .where((i) => !i.isAvailable)
-                      .map(
-                        (i) => Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 4),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.circle,
-                                  size: 6, color: Color(0xFFFF7043)),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  l10n.ingredientLabel(i.name),
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    color: Color(0xFF424242),
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                              Text(
-                                l10n.formatIngredientAmount(i.amount),
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  color: Color(0xFF9E9E9E),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      )
-                      .toList(),
+class _CreateShoppingListDialogState extends State<_CreateShoppingListDialog> {
+  final TextEditingController _nameCtrl = TextEditingController();
+  final TextEditingController _descCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _descCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.title),
+      content: SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: _nameCtrl,
+                autofocus: true,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
+                  labelText: 'Liste adı',
+                  hintText: 'Örn: Haftalık Alışveriş',
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 10),
+              TextField(
+                controller: _descCtrl,
+                textInputAction: TextInputAction.done,
+                decoration: const InputDecoration(
+                  labelText: 'Açıklama (opsiyonel)',
+                  hintText: 'Örn: Pazartesi market',
+                ),
+              ),
             ],
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: Text(l10n.done),
-              ),
-            ),
-            const SizedBox(height: 8),
-          ],
+          ),
         ),
       ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(null),
+          child: Text(widget.cancelLabel),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            final name = _nameCtrl.text.trim();
+            if (name.isEmpty) return;
+            Navigator.of(context).pop(
+              _NewListResult(name: name, description: _descCtrl.text),
+            );
+          },
+          child: Text(widget.createLabel),
+        ),
+      ],
     );
   }
+}
+
+class _MatchSummary {
+  final int matchPercent;
+  final List<String> missingNames;
+  const _MatchSummary({required this.matchPercent, required this.missingNames});
 }
 
 class _Legend extends StatelessWidget {

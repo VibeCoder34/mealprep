@@ -33,11 +33,12 @@ class ShoppingListScreen extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final nameCtrl = TextEditingController();
     final descCtrl = TextEditingController();
+    final cs = Theme.of(context).colorScheme;
 
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: cs.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
       ),
@@ -88,17 +89,17 @@ class ShoppingListScreen extends StatelessWidget {
                         height: 4,
                         margin: const EdgeInsets.only(bottom: 16),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFE0E0E0),
+                          color: Theme.of(ctx).colorScheme.outlineVariant,
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),
                     ),
                     Text(
                       l10n.newShoppingList,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
-                        color: Color(0xFF1A1A2E),
+                        color: Theme.of(ctx).colorScheme.onSurface,
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -172,6 +173,7 @@ class ShoppingListScreen extends StatelessWidget {
 
   void _sharePreferredList(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
     final lists = appState.shoppingLists;
     if (lists.isEmpty) return;
     final id = appState.defaultTargetListId ?? lists.first.id;
@@ -182,7 +184,7 @@ class ShoppingListScreen extends StatelessWidget {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(l10n.copiedToClipboard),
-        backgroundColor: const Color(0xFF00ACC1),
+        backgroundColor: cs.primary,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.all(16),
@@ -193,6 +195,7 @@ class ShoppingListScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
     return ListenableBuilder(
       listenable: appState,
       builder: (context, _) {
@@ -215,10 +218,7 @@ class ShoppingListScreen extends StatelessWidget {
                 IconButton(
                   tooltip: l10n.shareTooltip,
                   onPressed: () => _sharePreferredList(context),
-                  icon: const Icon(
-                    Icons.ios_share_rounded,
-                    color: Color(0xFF00ACC1),
-                  ),
+                  icon: Icon(Icons.ios_share_rounded, color: cs.primary),
                 ),
               const SizedBox(width: 4),
             ],
@@ -249,8 +249,6 @@ class ShoppingListScreen extends StatelessWidget {
               : FloatingActionButton.extended(
                   heroTag: 'shopping_hub_fab',
                   onPressed: () => _showCreateListSheet(context),
-                  backgroundColor: const Color(0xFF00ACC1),
-                  foregroundColor: Colors.white,
                   elevation: 2,
                   icon: const Icon(Icons.add_rounded, size: 22),
                   label: Text(
@@ -277,6 +275,7 @@ class _ShoppingListCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     final total = bundle.itemCount;
     final bought = bundle.boughtCount;
     final pct = total > 0 ? bought / total : 0.0;
@@ -289,9 +288,9 @@ class _ShoppingListCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: cs.surface,
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: const Color(0xFFF0F0F0)),
+            border: Border.all(color: cs.outlineVariant),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -303,8 +302,8 @@ class _ShoppingListCard extends StatelessWidget {
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF00ACC1), Color(0xFF00838F)],
+                      gradient: LinearGradient(
+                        colors: [cs.primary, cs.tertiary],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
@@ -321,10 +320,10 @@ class _ShoppingListCard extends StatelessWidget {
                       children: [
                         Text(
                           bundle.name,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 17,
                             fontWeight: FontWeight.w800,
-                            color: Color(0xFF1A1A2E),
+                            color: cs.onSurface,
                             letterSpacing: -0.3,
                           ),
                         ),
@@ -334,9 +333,9 @@ class _ShoppingListCard extends StatelessWidget {
                             bundle.description.trim(),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 13.5,
-                              color: Color(0xFF9E9E9E),
+                              color: cs.onSurfaceVariant,
                               height: 1.35,
                             ),
                           ),
@@ -344,10 +343,7 @@ class _ShoppingListCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const Icon(
-                    Icons.chevron_right_rounded,
-                    color: Color(0xFFCCCCCC),
-                  ),
+                  Icon(Icons.chevron_right_rounded, color: cs.outlineVariant),
                 ],
               ),
               const SizedBox(height: 14),
@@ -355,10 +351,10 @@ class _ShoppingListCard extends StatelessWidget {
                 total == 0
                     ? l10n.listItemsCount(0)
                     : '${l10n.listItemsCount(total)} · ${l10n.shoppingListProgress(bought, total)}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF757575),
+                  color: cs.onSurfaceVariant,
                 ),
               ),
               const SizedBox(height: 8),
@@ -366,10 +362,8 @@ class _ShoppingListCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(4),
                 child: LinearProgressIndicator(
                   value: total > 0 ? pct : 0,
-                  backgroundColor: const Color(0xFFF0F0F0),
-                  valueColor: const AlwaysStoppedAnimation<Color>(
-                    Color(0xFF00ACC1),
-                  ),
+                  backgroundColor: cs.surfaceContainer,
+                  valueColor: AlwaysStoppedAnimation<Color>(cs.primary),
                   minHeight: 6,
                 ),
               ),
@@ -394,6 +388,7 @@ class _EmptyHub extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 40),
@@ -404,7 +399,7 @@ class _EmptyHub extends StatelessWidget {
               width: 100,
               height: 100,
               decoration: BoxDecoration(
-                color: const Color(0xFFF5F7FA),
+                color: cs.surfaceContainer,
                 borderRadius: BorderRadius.circular(28),
               ),
               child: const Center(
@@ -414,10 +409,10 @@ class _EmptyHub extends StatelessWidget {
             const SizedBox(height: 22),
             Text(
               l10n.emptyShoppingTitle,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w800,
-                color: Color(0xFF1A1A2E),
+                color: cs.onSurface,
                 letterSpacing: -0.4,
               ),
             ),
@@ -425,9 +420,9 @@ class _EmptyHub extends StatelessWidget {
             Text(
               l10n.emptyShoppingBody,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14.5,
-                color: Color(0xFF9E9E9E),
+                color: cs.onSurfaceVariant,
                 height: 1.55,
               ),
             ),

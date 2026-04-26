@@ -273,10 +273,189 @@ class AppLocalizationsTr extends AppLocalizations {
   String get featAiRecipeCreate => 'Yaratıcı Tarif Üret';
 
   @override
+  String get aiCreateTitle => 'Kendi Tarifini Oluştur';
+
+  @override
+  String get aiCreateIngredientsLabel =>
+      'Hangi malzemeleri kullanmak istiyorsun?';
+
+  @override
+  String get aiCreateIngredientHint => 'Malzeme ekle...';
+
+  @override
+  String get aiDietaryPreference => 'Beslenme Tercihi';
+
+  @override
+  String get aiCookingTime => 'Pişirme Süresi';
+
+  @override
+  String get aiCalorieTarget => 'Kalori Hedefi';
+
+  @override
+  String get aiGenerateRecipe => 'Tarifi Üret';
+
+  @override
+  String get aiGenerating => 'AI tarif oluşturuyor...';
+
+  @override
+  String get aiRecipeCreated => 'Tarif başarıyla oluşturuldu';
+
+  @override
+  String get aiOpenRecipe => 'Tarife Git';
+
+  @override
+  String get aiAddMissingToShopping => 'Eksikleri Alışverişe Ekle';
+
+  @override
+  String get aiAddedToShopping => 'Alışveriş listesine eklendi';
+
+  @override
+  String get aiRecipeBadge => '🤖 AI Tarifi';
+
+  @override
+  String get aiEditRecipe => 'Tarifi Düzenle';
+
+  @override
+  String get aiSaveRecipe => 'Kaydet';
+
+  @override
+  String get aiRecipeSaved => 'Tarif kaydedildi';
+
+  @override
+  String get aiRecipeNameLabel => 'Tarif adı';
+
+  @override
+  String get aiRecipeIngredientsLabel => 'Malzemeler';
+
+  @override
+  String get aiRecipeStepsLabel => 'Adımlar';
+
+  @override
+  String get aiMultilineHint => 'Her satıra bir öğe';
+
+  @override
+  String get aiRecipeUpdated => 'Tarif güncellendi';
+
+  @override
+  String get aiSaveUpdatedRecipe => 'Güncellenmiş Tarifi Kaydet';
+
+  @override
+  String get aiEmptyIngredients => 'Lütfen en az 1 malzeme seç';
+
+  @override
+  String get aiConnectionError => 'Bağlantı hatası, lütfen tekrar deneyin';
+
+  @override
+  String get aiRateLimited => 'Çok sık istek, lütfen birkaç dakika bekle';
+
+  @override
+  String get aiInvalidResponse =>
+      'AI tarafından geçersiz tarif, lütfen tekrar dene';
+
+  @override
+  String get aiMisconfigured => 'AI yapılandırması eksik';
+
+  @override
+  String get aiUnknownError => 'Tarif oluşturulamadı, lütfen tekrar deneyin';
+
+  @override
+  String get aiInvalidInput => 'Lütfen geçerli bir değer gir';
+
+  @override
+  String get macroOptimizeTitle => 'Makroları Optimize Et';
+
+  @override
+  String get macroCurrentMacrosLabel => 'Mevcut makrolar';
+
+  @override
+  String get macroTargetMacroLabel => 'Hedef makro';
+
+  @override
+  String get macroTargetValueLabel => 'Hedef (g)';
+
+  @override
+  String get macroOptimizeButton => 'Makroları Optimize Et';
+
+  @override
+  String get macroOptimizing => 'Optimize ediliyor...';
+
+  @override
+  String get macroOptimizationResultTitle => 'Öneriler';
+
+  @override
+  String get macroUpdatedMacrosLabel => 'Güncellenmiş makrolar (tahmini)';
+
+  @override
+  String get mealPlanCreateTitle => 'Haftalık Plan Oluştur';
+
+  @override
+  String get mealPlanDaysLabel => 'Hangi günler?';
+
+  @override
+  String get mealPlanTotalCaloriesLabel => 'Toplam kalori? (opsiyonel)';
+
+  @override
+  String get mealPlanGenerateButton => 'Planı Oluştur';
+
+  @override
+  String get mealPlanGenerating => 'Plan oluşturuluyor...';
+
+  @override
+  String get mealPlanCreated => 'Plan oluşturuldu';
+
+  @override
+  String get mealPlanAddAllToShopping => 'Tümünü Alışverişe Ekle';
+
+  @override
+  String get mealPlanAddedToShopping =>
+      'Plan malzemeleri alışveriş listene eklendi';
+
+  @override
   String get featMacroOptimize => 'Makro Optimize Et';
 
   @override
   String get featWeeklyMealPlan => 'Haftalık Meal Plan';
+
+  @override
+  String get advancedFiltersTitle => 'Gelişmiş filtre';
+
+  @override
+  String get filterCookTime => 'Pişirme süresi';
+
+  @override
+  String get filterAny => 'Fark etmiyor';
+
+  @override
+  String filterUpToMinutes(int minutes) {
+    return '≤ $minutes dk';
+  }
+
+  @override
+  String get filter45Plus => '45+ dk';
+
+  @override
+  String get filterCaloriesMin => 'Kalori (min)';
+
+  @override
+  String get filterCaloriesMax => 'Kalori (max)';
+
+  @override
+  String get filterDifficulty => 'Zorluk';
+
+  @override
+  String get filterExcludeIngredients => 'Hariç tutulanlar';
+
+  @override
+  String get filterFavoriteIngredients => 'Favori malzemeler';
+
+  @override
+  String get filterCommaSeparatedHint => 'Virgülle ayır (örn: soğan, sarımsak)';
+
+  @override
+  String get clearAll => 'Temizle';
+
+  @override
+  String get applyFilters => 'Uygula';
 
   @override
   String get featNutritionAnalysis => 'Beslenme Analizi';
@@ -1010,4 +1189,74 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get addToShoppingListShort => 'Alışverişe ekle';
+
+  @override
+  String get sortTooltip => 'Sırala';
+
+  @override
+  String get sortBestMatch => 'En iyi eşleşme';
+
+  @override
+  String get sortNewest => 'Yeni';
+
+  @override
+  String get sortPopular => 'Popüler';
+
+  @override
+  String get sortRating => 'Puan';
+
+  @override
+  String get matchPerfectShort => 'Mükemmel eşleşme ✓';
+
+  @override
+  String get matchNeedPrefix => 'Gerekli:';
+
+  @override
+  String get inventorySearchHint => 'Envanterde ara';
+
+  @override
+  String get inventoryEmptyTitle => 'Henüz ürün yok';
+
+  @override
+  String get inventoryEmptyBody =>
+      'Tarif eşleşmesi için Mutfağım ekranından ürün eklemeye başla.';
+
+  @override
+  String get inventoryNoResults => 'Sonuç bulunamadı';
+
+  @override
+  String get inventoryTryDifferentSearch => 'Farklı bir arama deneyin.';
+
+  @override
+  String get inventoryEditItemTitle => 'Ürünü düzenle';
+
+  @override
+  String get inventoryItemNameLabel => 'Ürün adı';
+
+  @override
+  String get inventoryAmountLabel => 'Miktar';
+
+  @override
+  String get inventoryEmojiLabel => 'Emoji';
+
+  @override
+  String get inventorySavedToast => 'Kaydedildi';
+
+  @override
+  String get inventoryAddFailedToast => 'Ürün eklenemedi. Lütfen tekrar dene.';
+
+  @override
+  String get inventoryUnitMismatchTitle => 'Birim uyuşmuyor';
+
+  @override
+  String get inventoryUseExistingUnitCta => 'Mevcut birimi kullan';
+
+  @override
+  String inventoryUnitMismatchBody(
+    String item,
+    String existingUnit,
+    String pickedUnit,
+  ) {
+    return '$item zaten $existingUnit olarak kayıtlı. Sen $pickedUnit seçtin.';
+  }
 }

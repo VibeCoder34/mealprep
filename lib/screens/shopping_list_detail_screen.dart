@@ -3,8 +3,10 @@ import 'package:flutter/services.dart';
 import '../app_state.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n_extensions.dart';
+import '../models/inventory_item.dart';
 import '../models/shopping_item.dart';
 import '../models/shopping_list_bundle.dart';
+import '../services/ingredient_normalizer.dart';
 import '../widgets/add_manual_shopping_item_dialog.dart';
 
 /// Single shopping list: items, share, edit/delete list from menu.
@@ -12,6 +14,7 @@ class ShoppingListDetailScreen extends StatelessWidget {
   final String listId;
   final AppState appState;
   final VoidCallback? onGoToRecipes;
+  static const IngredientNormalizer _normalizer = IngredientNormalizer();
 
   const ShoppingListDetailScreen({
     super.key,
@@ -19,6 +22,163 @@ class ShoppingListDetailScreen extends StatelessWidget {
     required this.appState,
     this.onGoToRecipes,
   });
+
+  String _groupTitle(AppLocalizations l10n, String recipeId) {
+    final id = recipeId.trim();
+    if (id.isEmpty) return l10n.generalGroup;
+    if (id == 'general') return l10n.generalGroup;
+    if (id == 'manual') return l10n.manualShoppingGroup;
+
+    final local = appState.localRecipeById(id);
+    if (local != null && local.name.trim().isNotEmpty) return local.name.trim();
+
+    for (final r in appState.recipes) {
+      if (r.id == id && r.name.trim().isNotEmpty) return r.name.trim();
+    }
+
+    // Last resort: hide raw ids like recipe_0660 from the UI.
+    return l10n.shoppingListTitle;
+  }
+
+  String _resolveRecipeName(String recipeId, String? storedName) {
+    final s = (storedName ?? '').trim();
+    if (s.isNotEmpty) return s;
+    final id = recipeId.trim();
+    if (id.isEmpty || id == 'manual' || id == 'general') return '';
+    final local = appState.localRecipeById(id);
+    if (local != null && local.name.trim().isNotEmpty) return local.name.trim();
+    for (final r in appState.recipes) {
+      if (r.id == id && r.name.trim().isNotEmpty) return r.name.trim();
+    }
+    return '';
+  }
+
+  Future<void> _markBoughtWithInventory(BuildContext context, ShoppingItem item) async {
+    final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+
+    // Ask quantity + unit (same unit set as AddInventory manual tab).
+    final res = await showDialog<_InventoryAddResult?>(
+      context: context,
+      builder: (dctx) => _AddToInventoryDialog(
+        title: l10n.ingredientLabel(item.name),
+        units: const ['pcs', 'g', 'kg', 'ml', 'L', 'bunch', 'box', 'bottle', 'cloves', 'head'],
+      ),
+    );
+
+    if (res == null) return; // cancelled
+
+    try {
+      await appState.addItem(
+        InventoryItem(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          name: item.name,
+          emoji: _emojiForName(item.name),
+          quantity: res.quantity,
+          unit: res.unit,
+        ),
+      );
+    } on StateError catch (e) {
+      final itemKey = _normalizer.normalize(item.name);
+      final existing = appState.inventory.cast<InventoryItem?>().firstWhere(
+            (i) => i != null && _normalizer.normalize(i.name) == itemKey,
+            orElse: () => null,
+          );
+
+      if (e.message == 'unit_group_mismatch' && existing != null && context.mounted) {
+        await showDialog<void>(
+          context: context,
+          builder: (dctx) => AlertDialog(
+            title: Text(l10n.inventoryUnitMismatchTitle),
+            content: Text(
+              l10n.inventoryUnitMismatchBody(
+                l10n.ingredientLabel(existing.name),
+                l10n.unitLabel(existing.unit),
+                l10n.unitLabel(res.unit),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dctx).pop(),
+                child: Text(l10n.cancel),
+              ),
+              FilledButton(
+                onPressed: () async {
+                  Navigator.of(dctx).pop();
+                  await appState.addItem(
+                    InventoryItem(
+                      id: DateTime.now().millisecondsSinceEpoch.toString(),
+                      name: item.name,
+                      emoji: _emojiForName(item.name),
+                      quantity: res.quantity,
+                      unit: existing.unit,
+                    ),
+                  );
+                },
+                child: Text(l10n.inventoryUseExistingUnitCta),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.inventoryAddFailedToast),
+            backgroundColor: cs.error,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+      }
+      return;
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.inventoryAddFailedToast),
+            backgroundColor: cs.error,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+      }
+      return;
+    }
+
+    // Now mark as bought.
+    await appState.toggleShoppingItem(listId, item.id);
+
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(l10n.itemAdded(l10n.ingredientLabel(item.name))),
+        backgroundColor: cs.primary,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  String _emojiForName(String name) {
+    final s = _normalizer.normalize(name);
+    if (s.contains('sut')) return '🥛';
+    if (s.contains('tereyagi') || s.contains('butter')) return '🧈';
+    if (s.contains('yumurta')) return '🥚';
+    if (s.contains('pirinc') || s.contains('rice')) return '🍚';
+    if (s.contains('makarna') || s.contains('pasta')) return '🍝';
+    if (s.contains('un')) return '🌾';
+    if (s.contains('tuz')) return '🧂';
+    if (s.contains('sogan')) return '🧅';
+    if (s.contains('domates')) return '🍅';
+    return '🥫';
+  }
 
   void _copyToClipboard(
     BuildContext context,
@@ -43,8 +203,7 @@ class ShoppingListDetailScreen extends StatelessWidget {
       for (final item in entry.value) {
         final check = item.isBought ? '✓' : '○';
         final name = l10n.ingredientLabel(item.name);
-        final amt = l10n.formatIngredientAmount(item.amount);
-        buffer.writeln('$check $name – $amt');
+        buffer.writeln('$check $name');
       }
       buffer.writeln();
     }
@@ -464,7 +623,7 @@ class ShoppingListDetailScreen extends StatelessWidget {
                               ),
                               const SizedBox(width: 6),
                               Text(
-                                l10n.shoppingGroupTitle(entry.key),
+                                _groupTitle(l10n, entry.key),
                                 style: const TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
@@ -486,14 +645,18 @@ class ShoppingListDetailScreen extends StatelessWidget {
                                 padding: const EdgeInsets.only(bottom: 8),
                                 child: _ShoppingItemTile(
                                   item: item,
-                                  onToggle: () => appState.toggleShoppingItem(
-                                    listId,
-                                    item.id,
-                                  ),
+                                  onToggle: () {
+                                    if (item.isBought) {
+                                      appState.toggleShoppingItem(listId, item.id);
+                                      return;
+                                    }
+                                    _markBoughtWithInventory(context, item);
+                                  },
                                   onDelete: () => appState.removeShoppingItem(
                                     listId,
                                     item.id,
                                   ),
+                                  recipeNameLabel: _resolveRecipeName(item.recipeId, item.recipeName),
                                 ),
                               );
                             },
@@ -527,18 +690,20 @@ class _ShoppingItemTile extends StatelessWidget {
   final ShoppingItem item;
   final VoidCallback onToggle;
   final VoidCallback onDelete;
+  final String recipeNameLabel;
 
   const _ShoppingItemTile({
     required this.item,
     required this.onToggle,
     required this.onDelete,
+    required this.recipeNameLabel,
   });
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final name = l10n.ingredientLabel(item.name);
-    final amt = l10n.formatIngredientAmount(item.amount);
+    final recipeName = recipeNameLabel.trim();
     return Container(
       padding: const EdgeInsets.only(left: 12, right: 4, top: 6, bottom: 6),
       decoration: BoxDecoration(
@@ -594,18 +759,38 @@ class _ShoppingItemTile extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                child: Text(
-                  name,
-                  style: TextStyle(
-                    fontSize: 15.5,
-                    fontWeight: FontWeight.w500,
-                    color: item.isBought
-                        ? const Color(0xFFBDBDBD)
-                        : const Color(0xFF1A1A2E),
-                    decoration:
-                        item.isBought ? TextDecoration.lineThrough : null,
-                    letterSpacing: -0.2,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: TextStyle(
+                        fontSize: 15.5,
+                        fontWeight: FontWeight.w500,
+                        color: item.isBought
+                            ? const Color(0xFFBDBDBD)
+                            : const Color(0xFF1A1A2E),
+                        decoration:
+                            item.isBought ? TextDecoration.lineThrough : null,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                    if (recipeName.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        'Tarif: $recipeName',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          color: item.isBought
+                              ? const Color(0xFFCCCCCC)
+                              : const Color(0xFF9E9E9E),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ),
@@ -624,19 +809,105 @@ class _ShoppingItemTile extends StatelessWidget {
           ),
           Padding(
             padding: const EdgeInsets.only(right: 8),
-            child: Text(
-              amt,
-              style: TextStyle(
-                fontSize: 13.5,
-                color: item.isBought
-                    ? const Color(0xFFCCCCCC)
-                    : const Color(0xFF9E9E9E),
-                fontWeight: FontWeight.w500,
-              ),
-            ),
+            child: const SizedBox.shrink(),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _InventoryAddResult {
+  final int quantity;
+  final String unit;
+  const _InventoryAddResult({required this.quantity, required this.unit});
+}
+
+class _AddToInventoryDialog extends StatefulWidget {
+  final String title;
+  final List<String> units;
+  const _AddToInventoryDialog({required this.title, required this.units});
+
+  @override
+  State<_AddToInventoryDialog> createState() => _AddToInventoryDialogState();
+}
+
+class _AddToInventoryDialogState extends State<_AddToInventoryDialog> {
+  final TextEditingController _qtyCtrl = TextEditingController(text: '1');
+  String _unit = 'pcs';
+
+  @override
+  void initState() {
+    super.initState();
+    _unit = widget.units.contains('pcs') ? 'pcs' : widget.units.first;
+    _qtyCtrl.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _qtyCtrl.dispose();
+    super.dispose();
+  }
+
+  int? get _qty {
+    final raw = _qtyCtrl.text.trim();
+    final v = int.tryParse(raw);
+    if (v == null || v <= 0) return null;
+    return v;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+    final ok = _qty != null;
+
+    return AlertDialog(
+      title: Text(widget.title),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: _qtyCtrl,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+              labelText: l10n.quantity,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            value: _unit,
+            decoration: InputDecoration(
+              labelText: 'Birim',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+            items: widget.units
+                .map((u) => DropdownMenuItem(value: u, child: Text(l10n.unitLabel(u))))
+                .toList(growable: false),
+            onChanged: (v) => setState(() => _unit = v ?? _unit),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            l10n.addToPantryButton,
+            style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12.5),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(null),
+          child: Text(l10n.cancel),
+        ),
+        ElevatedButton(
+          onPressed: ok
+              ? () => Navigator.of(context).pop(
+                    _InventoryAddResult(quantity: _qty!, unit: _unit),
+                  )
+              : null,
+          child: Text(l10n.addToPantryButton),
+        ),
+      ],
     );
   }
 }

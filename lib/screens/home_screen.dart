@@ -4,6 +4,7 @@ import '../l10n/app_localizations.dart';
 import '../l10n/l10n_extensions.dart';
 import '../models/inventory_item.dart';
 import 'add_inventory_screen.dart';
+import 'inventory_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   final AppState appState;
@@ -41,6 +42,15 @@ class HomeScreen extends StatelessWidget {
                   ],
                 ),
                 actions: [
+                  IconButton(
+                    tooltip: l10n.yourPantry,
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => InventoryScreen(appState: appState),
+                      ),
+                    ),
+                    icon: const Icon(Icons.inventory_2_rounded),
+                  ),
                   Container(
                     margin: const EdgeInsets.only(right: 16),
                     child: CircleAvatar(
@@ -129,8 +139,6 @@ class HomeScreen extends StatelessWidget {
           ),
           floatingActionButton: FloatingActionButton.extended(
             onPressed: () => _navigateToAdd(context),
-            backgroundColor: const Color(0xFF00ACC1),
-            foregroundColor: Colors.white,
             elevation: 2,
             icon: const Icon(Icons.add_rounded, size: 22),
             label: Text(
@@ -160,13 +168,14 @@ class _HeroBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
     return GestureDetector(
       onTap: onTap,
       child: Container(
         height: 148,
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF00ACC1), Color(0xFF00838F)],
+          gradient: LinearGradient(
+            colors: [cs.primary, cs.tertiary],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -202,7 +211,7 @@ class _HeroBanner extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 16, vertical: 8),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: cs.surface,
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Row(
@@ -210,16 +219,16 @@ class _HeroBanner extends StatelessWidget {
                       children: [
                         Text(
                           l10n.getStarted,
-                          style: const TextStyle(
-                            color: Color(0xFF00ACC1),
+                          style: TextStyle(
+                            color: cs.primary,
                             fontWeight: FontWeight.w700,
                             fontSize: 13,
                           ),
                         ),
                         const SizedBox(width: 4),
-                        const Icon(
+                        Icon(
                           Icons.arrow_forward_rounded,
-                          color: Color(0xFF00ACC1),
+                          color: cs.primary,
                           size: 14,
                         ),
                       ],
@@ -256,7 +265,7 @@ class _InventoryCard extends StatelessWidget {
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 22),
         decoration: BoxDecoration(
-          color: const Color(0xFFFF5252),
+          color: Theme.of(context).colorScheme.error,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
@@ -318,8 +327,11 @@ class _InventoryCard extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right_rounded,
-                color: Color(0xFFCCCCCC), size: 22),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: cs.outlineVariant,
+              size: 22,
+            ),
           ],
         ),
       ),
@@ -335,12 +347,13 @@ class _LowInventoryHint extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 11, 8, 11),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF9E6),
+        color: cs.secondaryContainer.withValues(alpha: 0.55),
         borderRadius: BorderRadius.circular(13),
-        border: Border.all(color: const Color(0xFFFFE082)),
+        border: Border.all(color: cs.secondaryContainer),
       ),
       child: Row(
         children: [
@@ -349,9 +362,9 @@ class _LowInventoryHint extends StatelessWidget {
           Expanded(
             child: Text(
               l10n.lowInventoryHint,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
-                color: Color(0xFF795548),
+                color: cs.onSurface,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -359,7 +372,7 @@ class _LowInventoryHint extends StatelessWidget {
           TextButton(
             onPressed: onAdd,
             style: TextButton.styleFrom(
-              foregroundColor: const Color(0xFF00ACC1),
+              foregroundColor: cs.primary,
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               minimumSize: Size.zero,
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -383,6 +396,7 @@ class _EmptyInventory extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 40),
@@ -393,10 +407,10 @@ class _EmptyInventory extends StatelessWidget {
             const SizedBox(height: 18),
             Text(
               l10n.pantryEmpty,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF1A1A2E),
+                color: cs.onSurface,
                 letterSpacing: -0.4,
               ),
             ),
@@ -404,9 +418,9 @@ class _EmptyInventory extends StatelessWidget {
             Text(
               l10n.pantryEmptySubtitle,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
-                color: Color(0xFF9E9E9E),
+                color: cs.onSurfaceVariant,
                 height: 1.55,
               ),
             ),

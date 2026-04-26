@@ -26,19 +26,53 @@ class DatabaseService {
   Future<Map<String, dynamic>> addInventoryItem({
     required String userId,
     required String itemName,
+    required String itemKey,
     required String emoji,
     required num quantity,
     required String unit,
+    required String unitGroup,
   }) async {
     final res = await _client
         .from('inventory')
         .insert({
           'user_id': userId,
           'item_name': itemName,
+          'item_key': itemKey,
           'emoji': emoji,
           'quantity': quantity,
           'unit': unit,
+          'unit_group': unitGroup,
         })
+        .select()
+        .single();
+    return (res as Map).cast<String, dynamic>();
+  }
+
+  /// Upserts an inventory row by `(user_id, item_key, unit_group)`.
+  Future<Map<String, dynamic>> upsertInventoryItem({
+    required String userId,
+    required String itemName,
+    required String itemKey,
+    required String emoji,
+    required num quantity,
+    required String unit,
+    required String unitGroup,
+  }) async {
+    final res = await _client
+        .from('inventory')
+        .upsert(
+          {
+            'user_id': userId,
+            'item_name': itemName,
+            'item_key': itemKey,
+            'emoji': emoji,
+            'quantity': quantity,
+            'unit': unit,
+            'unit_group': unitGroup,
+            'updated_at': DateTime.now().toIso8601String(),
+          },
+          onConflict: 'user_id,item_key,unit_group',
+        )
         .select()
         .single();
     return (res as Map).cast<String, dynamic>();
@@ -51,11 +85,43 @@ class DatabaseService {
     await _client.from('inventory').delete().eq('id', id).eq('user_id', userId);
   }
 
+  Future<Map<String, dynamic>> updateInventoryItem({
+    required String id,
+    required String userId,
+    required String itemName,
+    required String itemKey,
+    required String emoji,
+    required num quantity,
+    required String unit,
+    required String unitGroup,
+  }) async {
+    final res = await _client
+        .from('inventory')
+        .update({
+          'item_name': itemName,
+          'item_key': itemKey,
+          'emoji': emoji,
+          'quantity': quantity,
+          'unit': unit,
+          'unit_group': unitGroup,
+          'updated_at': DateTime.now().toIso8601String(),
+        })
+        .eq('id', id)
+        .eq('user_id', userId)
+        .select()
+        .single();
+    return (res as Map).cast<String, dynamic>();
+  }
+
   // Shopping lists (per user)
   Future<List<Map<String, dynamic>>> fetchShoppingLists({required String userId}) async {
+    // Fetch lists WITH items in one roundtrip (avoids N+1 requests).
+    // Requires FK relationship: shopping_list_items.list_id -> shopping_lists.id
     final res = await _client
         .from('shopping_lists')
-        .select()
+        .select(
+          'id,name,description,created_at,updated_at,shopping_list_items(id,item_name,amount,is_purchased,source,recipe_id,recipe_name,created_at,updated_at)',
+        )
         .eq('user_id', userId)
         .order('created_at', ascending: false);
     return (res as List).cast<Map<String, dynamic>>();
@@ -118,6 +184,7 @@ class DatabaseService {
     required bool isPurchased,
     required String source,
     String? recipeId,
+    String? recipeName,
   }) async {
     final res = await _client
         .from('shopping_list_items')
@@ -128,6 +195,7 @@ class DatabaseService {
           'is_purchased': isPurchased,
           'source': source,
           'recipe_id': recipeId,
+          if (recipeName != null) 'recipe_name': recipeName,
         })
         .select()
         .single();
@@ -194,6 +262,36 @@ class DatabaseService {
 
   Future<void> deleteRecipeRating({required String userId, required String recipeId}) async {
     await _client.from('recipe_ratings').delete().eq('user_id', userId).eq('recipe_id', recipeId);
+  }
+
+  // Custom recipes (per user; includes AI-generated)
+  Future<List<Map<String, dynamic>>> fetchCustomRecipes({required String userId}) async {
+    final res = await _client
+        .from('custom_recipes')
+        .select('id,recipe,updated_at')
+        .eq('user_id', userId)
+        .order('updated_at', ascending: false);
+    return (res as List).cast<Map<String, dynamic>>();
+  }
+
+  Future<void> upsertCustomRecipe({
+    required String userId,
+    required String id,
+    required Map<String, Object?> recipeJson,
+  }) async {
+    await _client.from('custom_recipes').upsert({
+      'id': id,
+      'user_id': userId,
+      'recipe': recipeJson,
+      'updated_at': DateTime.now().toIso8601String(),
+    });
+  }
+
+  Future<void> deleteCustomRecipe({
+    required String userId,
+    required String id,
+  }) async {
+    await _client.from('custom_recipes').delete().eq('user_id', userId).eq('id', id);
   }
 }
 

@@ -276,10 +276,189 @@ class AppLocalizationsEs extends AppLocalizations {
   String get featAiRecipeCreate => 'Crear receta (IA)';
 
   @override
+  String get aiCreateTitle => 'Crea tu propia receta';
+
+  @override
+  String get aiCreateIngredientsLabel => '¿Qué ingredientes quieres usar?';
+
+  @override
+  String get aiCreateIngredientHint => 'Añade un ingrediente…';
+
+  @override
+  String get aiDietaryPreference => 'Preferencia alimentaria';
+
+  @override
+  String get aiCookingTime => 'Tiempo de cocción';
+
+  @override
+  String get aiCalorieTarget => 'Objetivo de calorías';
+
+  @override
+  String get aiGenerateRecipe => 'Generar receta';
+
+  @override
+  String get aiGenerating => 'La IA está generando…';
+
+  @override
+  String get aiRecipeCreated => 'Receta creada con éxito';
+
+  @override
+  String get aiOpenRecipe => 'Abrir receta';
+
+  @override
+  String get aiAddMissingToShopping => 'Añadir faltantes a la lista';
+
+  @override
+  String get aiAddedToShopping => 'Añadido a la lista de compras';
+
+  @override
+  String get aiRecipeBadge => '🤖 Receta IA';
+
+  @override
+  String get aiEditRecipe => 'Editar receta';
+
+  @override
+  String get aiSaveRecipe => 'Guardar';
+
+  @override
+  String get aiRecipeSaved => 'Receta guardada';
+
+  @override
+  String get aiRecipeNameLabel => 'Nombre de la receta';
+
+  @override
+  String get aiRecipeIngredientsLabel => 'Ingredientes';
+
+  @override
+  String get aiRecipeStepsLabel => 'Pasos';
+
+  @override
+  String get aiMultilineHint => 'Un elemento por línea';
+
+  @override
+  String get aiRecipeUpdated => 'Receta actualizada';
+
+  @override
+  String get aiSaveUpdatedRecipe => 'Guardar receta actualizada';
+
+  @override
+  String get aiEmptyIngredients => 'Selecciona al menos 1 ingrediente';
+
+  @override
+  String get aiConnectionError => 'Error de conexión, inténtalo de nuevo';
+
+  @override
+  String get aiRateLimited => 'Demasiadas solicitudes, espera unos minutos';
+
+  @override
+  String get aiInvalidResponse =>
+      'Respuesta inválida de la IA, inténtalo otra vez';
+
+  @override
+  String get aiMisconfigured => 'La IA no está configurada en esta compilación';
+
+  @override
+  String get aiUnknownError => 'Algo salió mal, inténtalo de nuevo';
+
+  @override
+  String get aiInvalidInput => 'Introduce un valor válido';
+
+  @override
+  String get macroOptimizeTitle => 'Optimizar macros';
+
+  @override
+  String get macroCurrentMacrosLabel => 'Macros actuales';
+
+  @override
+  String get macroTargetMacroLabel => 'Macro objetivo';
+
+  @override
+  String get macroTargetValueLabel => 'Objetivo (g)';
+
+  @override
+  String get macroOptimizeButton => 'Optimizar';
+
+  @override
+  String get macroOptimizing => 'Optimizando…';
+
+  @override
+  String get macroOptimizationResultTitle => 'Sugerencias';
+
+  @override
+  String get macroUpdatedMacrosLabel => 'Macros actualizados (estimación)';
+
+  @override
+  String get mealPlanCreateTitle => 'Crear plan semanal';
+
+  @override
+  String get mealPlanDaysLabel => '¿Qué días?';
+
+  @override
+  String get mealPlanTotalCaloriesLabel => 'Calorías totales (opcional)';
+
+  @override
+  String get mealPlanGenerateButton => 'Generar plan';
+
+  @override
+  String get mealPlanGenerating => 'Generando plan…';
+
+  @override
+  String get mealPlanCreated => 'Plan creado';
+
+  @override
+  String get mealPlanAddAllToShopping => 'Añadir todo a la lista';
+
+  @override
+  String get mealPlanAddedToShopping =>
+      'Ingredientes del plan añadidos a la lista';
+
+  @override
   String get featMacroOptimize => 'Optimizar macros';
 
   @override
   String get featWeeklyMealPlan => 'Plan semanal';
+
+  @override
+  String get advancedFiltersTitle => 'Filtros avanzados';
+
+  @override
+  String get filterCookTime => 'Tiempo de cocción';
+
+  @override
+  String get filterAny => 'Cualquiera';
+
+  @override
+  String filterUpToMinutes(int minutes) {
+    return 'Hasta $minutes min';
+  }
+
+  @override
+  String get filter45Plus => '45+ min';
+
+  @override
+  String get filterCaloriesMin => 'Calorías (mín)';
+
+  @override
+  String get filterCaloriesMax => 'Calorías (máx)';
+
+  @override
+  String get filterDifficulty => 'Dificultad';
+
+  @override
+  String get filterExcludeIngredients => 'Excluir ingredientes';
+
+  @override
+  String get filterFavoriteIngredients => 'Ingredientes favoritos';
+
+  @override
+  String get filterCommaSeparatedHint =>
+      'Separado por comas (p. ej., cebolla, ajo)';
+
+  @override
+  String get clearAll => 'Limpiar todo';
+
+  @override
+  String get applyFilters => 'Aplicar filtros';
 
   @override
   String get featNutritionAnalysis => 'Análisis nutricional';
@@ -1018,4 +1197,74 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get addToShoppingListShort => 'Añadir a la lista';
+
+  @override
+  String get sortTooltip => 'Ordenar';
+
+  @override
+  String get sortBestMatch => 'Mejor coincidencia';
+
+  @override
+  String get sortNewest => 'Nuevo';
+
+  @override
+  String get sortPopular => 'Popular';
+
+  @override
+  String get sortRating => 'Puntuación';
+
+  @override
+  String get matchPerfectShort => 'Coincidencia perfecta ✓';
+
+  @override
+  String get matchNeedPrefix => 'Falta:';
+
+  @override
+  String get inventorySearchHint => 'Buscar en inventario';
+
+  @override
+  String get inventoryEmptyTitle => 'Aún no hay productos';
+
+  @override
+  String get inventoryEmptyBody =>
+      'Añade productos desde la pestaña de cocina para empezar a encontrar recetas.';
+
+  @override
+  String get inventoryNoResults => 'Sin resultados';
+
+  @override
+  String get inventoryTryDifferentSearch => 'Prueba otra búsqueda.';
+
+  @override
+  String get inventoryEditItemTitle => 'Editar producto';
+
+  @override
+  String get inventoryItemNameLabel => 'Nombre del producto';
+
+  @override
+  String get inventoryAmountLabel => 'Cantidad';
+
+  @override
+  String get inventoryEmojiLabel => 'Emoji';
+
+  @override
+  String get inventorySavedToast => 'Guardado';
+
+  @override
+  String get inventoryAddFailedToast => 'Could not add item. Please try again.';
+
+  @override
+  String get inventoryUnitMismatchTitle => 'Unit doesn\'t match';
+
+  @override
+  String get inventoryUseExistingUnitCta => 'Use existing unit';
+
+  @override
+  String inventoryUnitMismatchBody(
+    String item,
+    String existingUnit,
+    String pickedUnit,
+  ) {
+    return '$item is already tracked as $existingUnit. You picked $pickedUnit.';
+  }
 }

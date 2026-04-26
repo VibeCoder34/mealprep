@@ -3,9 +3,13 @@ import '../app_state.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n_extensions.dart';
 import '../models/recipe.dart';
+import '../models/recipe_filter.dart';
+import '../services/recipe_discovery_service.dart';
 import '../widgets/premium_feature_modal.dart';
 import 'add_inventory_screen.dart';
 import 'recipe_detail_screen.dart';
+import 'widgets/advanced_recipe_filter_modal.dart';
+import 'widgets/weekly_meal_plan_modal.dart';
 
 class RecipeScreen extends StatefulWidget {
   final AppState appState;
@@ -17,48 +21,25 @@ class RecipeScreen extends StatefulWidget {
 }
 
 class _RecipeScreenState extends State<RecipeScreen> {
-  bool _isGenerated = false;
-  String _selectedCategory = 'all';
-  String _selectedCollection = 'all';
+  RecipeFilter _filter = RecipeFilter.empty;
+  RecipeSortOption _sort = RecipeSortOption.bestMatch;
 
-  static const _categoryKeys = [
-    'all',
-    'high_protein',
+  static const _mealTypes = <(String, String)>[
+    ('breakfast', '🍳'),
+    ('lunch', '🥗'),
+    ('dinner', '🍲'),
+    ('snack', '🥪'),
+  ];
+
+  static const _quickDietaryTags = <String>[
     'vegan',
+    'keto',
+    'gluten_free',
+    'high_protein',
     'low_carb',
-    'quick',
-    'dinner',
-    'breakfast',
-    'snack',
-    'balanced',
   ];
-  static const _allCollections = [
-    'Yüksek Protein',
-    'Öğle Yemeği',
-    'Akşam',
-    'Hafif',
-    'Çorba',
-    'Vegan Haftası',
-    'Tek Tencere',
-    'Düşük Karbonhidrat',
-    'Hızlı',
-    '5 Dakika',
-    'Öğrenci',
-    'Bütçe Dostu',
-    'Kahvaltı',
-    'Protein',
-    'Atıştırmalık',
-    'Meze',
-    'Meal Prep',
-    'Dengeli Beslenme',
-  ];
-  static const _freeCollections = _allCollections;
 
-  List<Recipe> _filteredRecipes(AppState appState) {
-    final recipes = appState.recipes;
-    if (_selectedCategory == 'all') return recipes;
-    return recipes.where((r) => r.categoryKey == _selectedCategory).toList();
-  }
+  final RecipeDiscoveryService _discovery = RecipeDiscoveryService();
 
   String _emptyRecipeMessage(
     AppLocalizations l10n,
@@ -88,13 +69,33 @@ class _RecipeScreenState extends State<RecipeScreen> {
                 letterSpacing: -0.5,
               ),
         ),
+        actions: [
+          IconButton(
+            tooltip: l10n.featWeeklyMealPlan,
+            onPressed: widget.appState.isPremium
+                ? () => showWeeklyMealPlanModal(context, appState: widget.appState)
+                : () => showPremiumFeatureModal(
+                      context,
+                      appState: widget.appState,
+                      description: l10n.premiumFeatureDefaultBody,
+                    ),
+            icon: const Icon(Icons.calendar_month_rounded),
+          ),
+          const SizedBox(width: 4),
+        ],
+      ),
+      floatingActionButton: ListenableBuilder(
+        listenable: widget.appState,
+        builder: (context, _) {
+          // Discovery-first direction: no AI "generate" entry point here.
+          return const SizedBox.shrink();
+        },
       ),
       body: ListenableBuilder(
         listenable: widget.appState,
         builder: (context, _) {
           final inventoryCount = widget.appState.inventory.length;
           if (inventoryCount == 0) return _buildNoInventoryState(context);
-          if (!_isGenerated) return _buildPreGenerateState(context, inventoryCount);
           return _buildRecipeList(context, inventoryCount);
         },
       ),
@@ -103,6 +104,7 @@ class _RecipeScreenState extends State<RecipeScreen> {
 
   Widget _buildNoInventoryState(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 40),
@@ -113,7 +115,7 @@ class _RecipeScreenState extends State<RecipeScreen> {
               width: 100,
               height: 100,
               decoration: BoxDecoration(
-                color: const Color(0xFFF5F7FA),
+                color: cs.surfaceContainer,
                 borderRadius: BorderRadius.circular(28),
               ),
               child: const Center(
@@ -124,10 +126,10 @@ class _RecipeScreenState extends State<RecipeScreen> {
             Text(
               l10n.noPantryItems,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w800,
-                color: Color(0xFF1A1A2E),
+                color: cs.onSurface,
                 letterSpacing: -0.4,
               ),
             ),
@@ -135,9 +137,9 @@ class _RecipeScreenState extends State<RecipeScreen> {
             Text(
               l10n.noPantryItemsSubtitle,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14.5,
-                color: Color(0xFF9E9E9E),
+                color: cs.onSurfaceVariant,
                 height: 1.55,
               ),
             ),
@@ -161,116 +163,9 @@ class _RecipeScreenState extends State<RecipeScreen> {
     );
   }
 
-  Widget _buildPreGenerateState(BuildContext context, int inventoryCount) {
-    final l10n = AppLocalizations.of(context)!;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 36),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF00ACC1), Color(0xFF00838F)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(28),
-              ),
-              child: const Center(
-                child: Text('👨‍🍳', style: TextStyle(fontSize: 52)),
-              ),
-            ),
-            const SizedBox(height: 22),
-            Text(
-              l10n.discoverRecipes,
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF1A1A2E),
-                letterSpacing: -0.5,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              l10n.personalizedRecipesBody(inventoryCount),
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 14.5,
-                color: Color(0xFF9E9E9E),
-                height: 1.55,
-              ),
-            ),
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () => setState(() => _isGenerated = true),
-                icon: const Icon(Icons.auto_awesome_rounded, size: 20),
-                label: Text(l10n.generateRecipes),
-              ),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: widget.appState.isPremium
-                    ? () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(l10n.featAiRecipeCreate),
-                            behavior: SnackBarBehavior.floating,
-                          ),
-                        );
-                      }
-                    : () => showPremiumFeatureModal(
-                          context,
-                          appState: widget.appState,
-                          description: l10n.premiumFeatureDefaultBody,
-                        ),
-                icon: Icon(
-                  Icons.psychology_rounded,
-                  size: 20,
-                  color: widget.appState.isPremium
-                      ? const Color(0xFF00ACC1)
-                      : const Color(0xFFBDBDBD),
-                ),
-                label: Text(l10n.featAiRecipeCreate),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: widget.appState.isPremium
-                      ? const Color(0xFF00ACC1)
-                      : const Color(0xFFBDBDBD),
-                  side: BorderSide(
-                    color: widget.appState.isPremium
-                        ? const Color(0xFF00ACC1)
-                        : const Color(0xFFE0E0E0),
-                  ),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _FeatureChip(emoji: '🥚', label: l10n.fromPantry),
-                const SizedBox(width: 8),
-                _FeatureChip(emoji: '⚡', label: l10n.quickRecipes),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildRecipeList(BuildContext context, int inventoryCount) {
     final l10n = AppLocalizations.of(context)!;
-    final availableCollections =
-        widget.appState.isPremium ? _allCollections : _freeCollections;
+    final cs = Theme.of(context).colorScheme;
 
     if (widget.appState.recipesLoading && widget.appState.recipes.isEmpty) {
       return Center(
@@ -327,12 +222,16 @@ class _RecipeScreenState extends State<RecipeScreen> {
       );
     }
 
-    var recipes = _filteredRecipes(widget.appState);
-    if (_selectedCollection != 'all') {
-      recipes = recipes
-          .where((r) => r.collections.contains(_selectedCollection))
-          .toList(growable: false);
-    }
+    final results = _discovery.discover(
+      recipes: widget.appState.recipes,
+      inventory: widget.appState.inventory,
+      filter: _filter.copyWith(
+        // Merge profile dietary preferences into filter (AND)
+        dietaryTags: {..._filter.dietaryTags, ...widget.appState.dietaryPreferences},
+      ),
+      sort: _sort,
+    ).take(20).toList(growable: false);
+
     final savedIds = widget.appState.savedRecipeIds;
     final savedRecipes = savedIds
         .map((id) {
@@ -351,8 +250,8 @@ class _RecipeScreenState extends State<RecipeScreen> {
             margin: const EdgeInsets.all(16),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF00ACC1), Color(0xFF00838F)],
+              gradient: LinearGradient(
+                colors: [cs.primary, cs.tertiary],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -375,7 +274,7 @@ class _RecipeScreenState extends State<RecipeScreen> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        l10n.recipesFoundCount(widget.appState.recipes.length),
+                        l10n.recipesFoundCount(results.length),
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 16,
@@ -386,21 +285,16 @@ class _RecipeScreenState extends State<RecipeScreen> {
                     ],
                   ),
                 ),
-                TextButton(
-                  onPressed: () => setState(() => _isGenerated = false),
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    backgroundColor: Colors.white.withValues(alpha: 0.2),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 6),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20)),
-                  ),
-                  child: Text(
-                    l10n.refresh,
-                    style: const TextStyle(
-                        fontSize: 12.5, fontWeight: FontWeight.w600),
-                  ),
+                PopupMenuButton<RecipeSortOption>(
+                  tooltip: l10n.sortTooltip,
+                  icon: const Icon(Icons.sort_rounded, color: Colors.white),
+                  onSelected: (v) => setState(() => _sort = v),
+                  itemBuilder: (ctx) => [
+                    PopupMenuItem(value: RecipeSortOption.bestMatch, child: Text(l10n.sortBestMatch)),
+                    PopupMenuItem(value: RecipeSortOption.newest, child: Text(l10n.sortNewest)),
+                    PopupMenuItem(value: RecipeSortOption.popular, child: Text(l10n.sortPopular)),
+                    PopupMenuItem(value: RecipeSortOption.rating, child: Text(l10n.sortRating)),
+                  ],
                 ),
               ],
             ),
@@ -412,39 +306,26 @@ class _RecipeScreenState extends State<RecipeScreen> {
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: _categoryKeys.length,
+              itemCount: 1 + _mealTypes.length,
               separatorBuilder: (_, __) => const SizedBox(width: 8),
               itemBuilder: (context, index) {
-                final cat = _categoryKeys[index];
-                final isSelected = cat == _selectedCategory;
-                final label = l10n.categoryLabel(cat);
+                if (index == 0) {
+                  final isSelected = _filter.mealType == null;
+                  return GestureDetector(
+                    onTap: () => setState(() => _filter = _filter.copyWith(clearMealType: true)),
+                    child: _Chip(
+                      label: l10n.categoryAll,
+                      isSelected: isSelected,
+                    ),
+                  );
+                }
+                final mt = _mealTypes[index - 1].$1;
+                final emoji = _mealTypes[index - 1].$2;
+                final isSelected = _filter.mealType == mt;
+                final label = '$emoji ${l10n.categoryLabel(mt)}';
                 return GestureDetector(
-                  onTap: () => setState(() => _selectedCategory = cat),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? const Color(0xFF00ACC1)
-                          : Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: isSelected
-                            ? const Color(0xFF00ACC1)
-                            : const Color(0xFFE0E0E0),
-                      ),
-                    ),
-                    child: Text(
-                      label,
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w600,
-                        color: isSelected
-                            ? Colors.white
-                            : const Color(0xFF757575),
-                      ),
-                    ),
-                  ),
+                  onTap: () => setState(() => _filter = _filter.copyWith(mealType: mt)),
+                  child: _Chip(label: label, isSelected: isSelected),
                 );
               },
             ),
@@ -457,74 +338,30 @@ class _RecipeScreenState extends State<RecipeScreen> {
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: 1 + _allCollections.length,
+              itemCount: _quickDietaryTags.length + 1,
               separatorBuilder: (_, __) => const SizedBox(width: 8),
               itemBuilder: (context, index) {
-                final label =
-                    index == 0 ? l10n.collectionsAll : _allCollections[index - 1];
-                final isLocked = !widget.appState.isPremium &&
-                    index != 0 &&
-                    !availableCollections.contains(label);
-                final isSelected = (index == 0 && _selectedCollection == 'all') ||
-                    (index != 0 && _selectedCollection == label);
-
+                if (index == _quickDietaryTags.length) {
+                  return OutlinedButton.icon(
+                    onPressed: () async {
+                      final next = await showAdvancedRecipeFilterModal(context, current: _filter);
+                      if (next == null) return;
+                      setState(() => _filter = next);
+                    },
+                    icon: const Icon(Icons.tune_rounded, size: 18),
+                    label: Text(l10n.advancedFiltersTitle),
+                  );
+                }
+                final key = _quickDietaryTags[index];
+                final selected = _filter.dietaryTags.contains(key);
+                final label = l10n.dietLabelForKey(key);
                 return GestureDetector(
                   onTap: () {
-                    if (isLocked) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(l10n.upgradeToPremium),
-                          backgroundColor: const Color(0xFF00ACC1),
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          margin: const EdgeInsets.all(16),
-                        ),
-                      );
-                      return;
-                    }
-                    setState(() => _selectedCollection = index == 0 ? 'all' : label);
+                    final nextTags = Set<String>.from(_filter.dietaryTags);
+                    selected ? nextTags.remove(key) : nextTags.add(key);
+                    setState(() => _filter = _filter.copyWith(dietaryTags: nextTags));
                   },
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? const Color(0xFF1A1A2E)
-                          : Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: isSelected
-                            ? const Color(0xFF1A1A2E)
-                            : const Color(0xFFE0E0E0),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (isLocked) ...[
-                          Icon(
-                            Icons.lock_rounded,
-                            size: 14,
-                            color:
-                                isSelected ? Colors.white : const Color(0xFF9E9E9E),
-                          ),
-                          const SizedBox(width: 6),
-                        ],
-                        Text(
-                          label,
-                          style: TextStyle(
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w600,
-                            color: isSelected
-                                ? Colors.white
-                                : const Color(0xFF757575),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  child: _Chip(label: label, isSelected: selected),
                 );
               },
             ),
@@ -581,7 +418,7 @@ class _RecipeScreenState extends State<RecipeScreen> {
           const SliverToBoxAdapter(child: Divider(height: 1)),
           const SliverToBoxAdapter(child: SizedBox(height: 16)),
         ],
-        if (recipes.isEmpty)
+        if (results.isEmpty)
           SliverFillRemaining(
             child: Center(
               child: Column(
@@ -608,16 +445,19 @@ class _RecipeScreenState extends State<RecipeScreen> {
             sliver: SliverList(
               delegate: SliverChildBuilderDelegate(
                 (context, index) {
-                  final recipe = recipes[index];
+                  final item = results[index];
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 12),
                     child: _RecipeCard(
-                      recipe: recipe,
+                      recipe: item.recipe,
                       appState: widget.appState,
+                      matchPercent: item.matchPercent,
+                      missingCountOverride: item.missingCount,
+                      totalCountOverride: item.totalCount,
                       onOpenDetail: () => Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (_) => RecipeDetailScreen(
-                            recipeId: recipe.id,
+                            recipeId: item.recipe.id,
                             appState: widget.appState,
                           ),
                         ),
@@ -625,7 +465,7 @@ class _RecipeScreenState extends State<RecipeScreen> {
                     ),
                   );
                 },
-                childCount: recipes.length,
+                childCount: results.length,
               ),
             ),
           ),
@@ -638,11 +478,17 @@ class _RecipeCard extends StatelessWidget {
   final Recipe recipe;
   final AppState appState;
   final VoidCallback onOpenDetail;
+  final int? matchPercent;
+  final int? missingCountOverride;
+  final int? totalCountOverride;
 
   const _RecipeCard({
     required this.recipe,
     required this.appState,
     required this.onOpenDetail,
+    this.matchPercent,
+    this.missingCountOverride,
+    this.totalCountOverride,
   });
 
   bool get _lockedPremium => recipe.isPremium && !appState.isPremium;
@@ -650,13 +496,14 @@ class _RecipeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final missingCount = recipe.missingCount;
-    final availableCount = recipe.availableCount;
-    final totalCount = recipe.ingredients.length;
+    final totalCount = totalCountOverride ?? recipe.ingredients.length;
+    final missingCount = missingCountOverride ?? recipe.missingCount;
+    final availableCount = (totalCount - missingCount).clamp(0, totalCount);
     final title = recipe.name;
-    final cat = l10n.categoryLabel(recipe.categoryKey);
+    final cat = l10n.categoryLabel(recipe.category);
     final time = l10n.prepTimeMin(recipe.prepTimeMinutes);
     final isSaved = appState.isRecipeSaved(recipe.id);
+    final imageUrl = recipe.imageUrl;
 
     return GestureDetector(
       onTap: () {
@@ -686,10 +533,24 @@ class _RecipeCard extends StatelessWidget {
                 color: const Color(0xFFF5F7FA),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Center(
-                child: Text(recipe.emoji,
-                    style: const TextStyle(fontSize: 32)),
-              ),
+              child: (imageUrl != null && imageUrl.trim().isNotEmpty)
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: Image.network(
+                        imageUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Center(
+                          child: Text(recipe.emoji, style: const TextStyle(fontSize: 32)),
+                        ),
+                        loadingBuilder: (context, child, progress) {
+                          if (progress == null) return child;
+                          return const Center(child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)));
+                        },
+                      ),
+                    )
+                  : Center(
+                      child: Text(recipe.emoji, style: const TextStyle(fontSize: 32)),
+                    ),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -739,6 +600,10 @@ class _RecipeCard extends StatelessWidget {
                       _InfoTag(icon: Icons.schedule_rounded, text: time),
                       const SizedBox(width: 6),
                       _InfoTag(icon: Icons.restaurant_rounded, text: cat),
+                      if (matchPercent != null) ...[
+                        const SizedBox(width: 6),
+                        _InfoTag(icon: Icons.inventory_2_rounded, text: '${matchPercent!}%'),
+                      ],
                     ],
                   ),
                   const SizedBox(height: 10),
@@ -829,26 +694,27 @@ class _InfoTag extends StatelessWidget {
   }
 }
 
-class _FeatureChip extends StatelessWidget {
-  final String emoji;
+class _Chip extends StatelessWidget {
   final String label;
-
-  const _FeatureChip({required this.emoji, required this.label});
+  final bool isSelected;
+  const _Chip({required this.label, required this.isSelected});
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFE0F7FA),
+        color: isSelected ? cs.primary : cs.surface,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: isSelected ? cs.primary : cs.outlineVariant),
       ),
       child: Text(
-        '$emoji $label',
-        style: const TextStyle(
-          fontSize: 12.5,
-          color: Color(0xFF00838F),
+        label,
+        style: TextStyle(
+          fontSize: 13.5,
           fontWeight: FontWeight.w600,
+          color: isSelected ? cs.onPrimary : cs.onSurfaceVariant,
         ),
       ),
     );

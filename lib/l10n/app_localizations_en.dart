@@ -274,10 +274,189 @@ class AppLocalizationsEn extends AppLocalizations {
   String get featAiRecipeCreate => 'Create recipe (AI)';
 
   @override
+  String get aiCreateTitle => 'Create your own recipe';
+
+  @override
+  String get aiCreateIngredientsLabel =>
+      'Which ingredients do you want to use?';
+
+  @override
+  String get aiCreateIngredientHint => 'Add an ingredient…';
+
+  @override
+  String get aiDietaryPreference => 'Dietary preference';
+
+  @override
+  String get aiCookingTime => 'Cooking time';
+
+  @override
+  String get aiCalorieTarget => 'Calorie target';
+
+  @override
+  String get aiGenerateRecipe => 'Generate recipe';
+
+  @override
+  String get aiGenerating => 'AI is generating…';
+
+  @override
+  String get aiRecipeCreated => 'Recipe created successfully';
+
+  @override
+  String get aiOpenRecipe => 'Open recipe';
+
+  @override
+  String get aiAddMissingToShopping => 'Add missing to shopping list';
+
+  @override
+  String get aiAddedToShopping => 'Added to shopping list';
+
+  @override
+  String get aiRecipeBadge => '🤖 AI Recipe';
+
+  @override
+  String get aiEditRecipe => 'Edit recipe';
+
+  @override
+  String get aiSaveRecipe => 'Save';
+
+  @override
+  String get aiRecipeSaved => 'Recipe saved';
+
+  @override
+  String get aiRecipeNameLabel => 'Recipe name';
+
+  @override
+  String get aiRecipeIngredientsLabel => 'Ingredients';
+
+  @override
+  String get aiRecipeStepsLabel => 'Steps';
+
+  @override
+  String get aiMultilineHint => 'One item per line';
+
+  @override
+  String get aiRecipeUpdated => 'Recipe updated';
+
+  @override
+  String get aiSaveUpdatedRecipe => 'Save updated recipe';
+
+  @override
+  String get aiEmptyIngredients => 'Please select at least 1 ingredient';
+
+  @override
+  String get aiConnectionError => 'Connection error, please retry';
+
+  @override
+  String get aiRateLimited => 'Too many requests, please wait a few minutes';
+
+  @override
+  String get aiInvalidResponse => 'Invalid recipe from AI, please try again';
+
+  @override
+  String get aiMisconfigured => 'AI is not configured on this build';
+
+  @override
+  String get aiUnknownError => 'Something went wrong, please try again';
+
+  @override
+  String get aiInvalidInput => 'Please enter a valid value';
+
+  @override
+  String get macroOptimizeTitle => 'Optimize macros';
+
+  @override
+  String get macroCurrentMacrosLabel => 'Current macros';
+
+  @override
+  String get macroTargetMacroLabel => 'Target macro';
+
+  @override
+  String get macroTargetValueLabel => 'Target (g)';
+
+  @override
+  String get macroOptimizeButton => 'Optimize';
+
+  @override
+  String get macroOptimizing => 'Optimizing…';
+
+  @override
+  String get macroOptimizationResultTitle => 'Suggestions';
+
+  @override
+  String get macroUpdatedMacrosLabel => 'Updated macros (estimate)';
+
+  @override
+  String get mealPlanCreateTitle => 'Create weekly meal plan';
+
+  @override
+  String get mealPlanDaysLabel => 'Which days?';
+
+  @override
+  String get mealPlanTotalCaloriesLabel => 'Total calories (optional)';
+
+  @override
+  String get mealPlanGenerateButton => 'Generate plan';
+
+  @override
+  String get mealPlanGenerating => 'Generating plan…';
+
+  @override
+  String get mealPlanCreated => 'Plan created';
+
+  @override
+  String get mealPlanAddAllToShopping => 'Add all to shopping list';
+
+  @override
+  String get mealPlanAddedToShopping =>
+      'Added plan ingredients to shopping list';
+
+  @override
   String get featMacroOptimize => 'Optimize macros';
 
   @override
   String get featWeeklyMealPlan => 'Weekly meal plan';
+
+  @override
+  String get advancedFiltersTitle => 'Advanced filters';
+
+  @override
+  String get filterCookTime => 'Cook time';
+
+  @override
+  String get filterAny => 'Any';
+
+  @override
+  String filterUpToMinutes(int minutes) {
+    return 'Up to $minutes min';
+  }
+
+  @override
+  String get filter45Plus => '45+ min';
+
+  @override
+  String get filterCaloriesMin => 'Calories (min)';
+
+  @override
+  String get filterCaloriesMax => 'Calories (max)';
+
+  @override
+  String get filterDifficulty => 'Difficulty';
+
+  @override
+  String get filterExcludeIngredients => 'Exclude ingredients';
+
+  @override
+  String get filterFavoriteIngredients => 'Favorite ingredients';
+
+  @override
+  String get filterCommaSeparatedHint =>
+      'Comma-separated (e.g., onion, garlic)';
+
+  @override
+  String get clearAll => 'Clear all';
+
+  @override
+  String get applyFilters => 'Apply filters';
 
   @override
   String get featNutritionAnalysis => 'Nutrition analysis';
@@ -1013,4 +1192,74 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get addToShoppingListShort => 'Add to shopping list';
+
+  @override
+  String get sortTooltip => 'Sort';
+
+  @override
+  String get sortBestMatch => 'Best match';
+
+  @override
+  String get sortNewest => 'New';
+
+  @override
+  String get sortPopular => 'Popular';
+
+  @override
+  String get sortRating => 'Rating';
+
+  @override
+  String get matchPerfectShort => 'Perfect match ✓';
+
+  @override
+  String get matchNeedPrefix => 'Need:';
+
+  @override
+  String get inventorySearchHint => 'Search inventory';
+
+  @override
+  String get inventoryEmptyTitle => 'No items yet';
+
+  @override
+  String get inventoryEmptyBody =>
+      'Add items from the Kitchen tab to start matching recipes.';
+
+  @override
+  String get inventoryNoResults => 'No results';
+
+  @override
+  String get inventoryTryDifferentSearch => 'Try a different search.';
+
+  @override
+  String get inventoryEditItemTitle => 'Edit item';
+
+  @override
+  String get inventoryItemNameLabel => 'Item name';
+
+  @override
+  String get inventoryAmountLabel => 'Amount';
+
+  @override
+  String get inventoryEmojiLabel => 'Emoji';
+
+  @override
+  String get inventorySavedToast => 'Saved';
+
+  @override
+  String get inventoryAddFailedToast => 'Could not add item. Please try again.';
+
+  @override
+  String get inventoryUnitMismatchTitle => 'Unit doesn\'t match';
+
+  @override
+  String get inventoryUseExistingUnitCta => 'Use existing unit';
+
+  @override
+  String inventoryUnitMismatchBody(
+    String item,
+    String existingUnit,
+    String pickedUnit,
+  ) {
+    return '$item is already tracked as $existingUnit. You picked $pickedUnit.';
+  }
 }

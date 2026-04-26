@@ -586,6 +586,276 @@ abstract class AppLocalizations {
   /// **'Create recipe (AI)'**
   String get featAiRecipeCreate;
 
+  /// No description provided for @aiCreateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create your own recipe'**
+  String get aiCreateTitle;
+
+  /// No description provided for @aiCreateIngredientsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Which ingredients do you want to use?'**
+  String get aiCreateIngredientsLabel;
+
+  /// No description provided for @aiCreateIngredientHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Add an ingredient…'**
+  String get aiCreateIngredientHint;
+
+  /// No description provided for @aiDietaryPreference.
+  ///
+  /// In en, this message translates to:
+  /// **'Dietary preference'**
+  String get aiDietaryPreference;
+
+  /// No description provided for @aiCookingTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Cooking time'**
+  String get aiCookingTime;
+
+  /// No description provided for @aiCalorieTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'Calorie target'**
+  String get aiCalorieTarget;
+
+  /// No description provided for @aiGenerateRecipe.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate recipe'**
+  String get aiGenerateRecipe;
+
+  /// No description provided for @aiGenerating.
+  ///
+  /// In en, this message translates to:
+  /// **'AI is generating…'**
+  String get aiGenerating;
+
+  /// No description provided for @aiRecipeCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Recipe created successfully'**
+  String get aiRecipeCreated;
+
+  /// No description provided for @aiOpenRecipe.
+  ///
+  /// In en, this message translates to:
+  /// **'Open recipe'**
+  String get aiOpenRecipe;
+
+  /// No description provided for @aiAddMissingToShopping.
+  ///
+  /// In en, this message translates to:
+  /// **'Add missing to shopping list'**
+  String get aiAddMissingToShopping;
+
+  /// No description provided for @aiAddedToShopping.
+  ///
+  /// In en, this message translates to:
+  /// **'Added to shopping list'**
+  String get aiAddedToShopping;
+
+  /// No description provided for @aiRecipeBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'🤖 AI Recipe'**
+  String get aiRecipeBadge;
+
+  /// No description provided for @aiEditRecipe.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit recipe'**
+  String get aiEditRecipe;
+
+  /// No description provided for @aiSaveRecipe.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get aiSaveRecipe;
+
+  /// No description provided for @aiRecipeSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Recipe saved'**
+  String get aiRecipeSaved;
+
+  /// No description provided for @aiRecipeNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Recipe name'**
+  String get aiRecipeNameLabel;
+
+  /// No description provided for @aiRecipeIngredientsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Ingredients'**
+  String get aiRecipeIngredientsLabel;
+
+  /// No description provided for @aiRecipeStepsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Steps'**
+  String get aiRecipeStepsLabel;
+
+  /// No description provided for @aiMultilineHint.
+  ///
+  /// In en, this message translates to:
+  /// **'One item per line'**
+  String get aiMultilineHint;
+
+  /// No description provided for @aiRecipeUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Recipe updated'**
+  String get aiRecipeUpdated;
+
+  /// No description provided for @aiSaveUpdatedRecipe.
+  ///
+  /// In en, this message translates to:
+  /// **'Save updated recipe'**
+  String get aiSaveUpdatedRecipe;
+
+  /// No description provided for @aiEmptyIngredients.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select at least 1 ingredient'**
+  String get aiEmptyIngredients;
+
+  /// No description provided for @aiConnectionError.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection error, please retry'**
+  String get aiConnectionError;
+
+  /// No description provided for @aiRateLimited.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many requests, please wait a few minutes'**
+  String get aiRateLimited;
+
+  /// No description provided for @aiInvalidResponse.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid recipe from AI, please try again'**
+  String get aiInvalidResponse;
+
+  /// No description provided for @aiMisconfigured.
+  ///
+  /// In en, this message translates to:
+  /// **'AI is not configured on this build'**
+  String get aiMisconfigured;
+
+  /// No description provided for @aiUnknownError.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong, please try again'**
+  String get aiUnknownError;
+
+  /// No description provided for @aiInvalidInput.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid value'**
+  String get aiInvalidInput;
+
+  /// No description provided for @macroOptimizeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Optimize macros'**
+  String get macroOptimizeTitle;
+
+  /// No description provided for @macroCurrentMacrosLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Current macros'**
+  String get macroCurrentMacrosLabel;
+
+  /// No description provided for @macroTargetMacroLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Target macro'**
+  String get macroTargetMacroLabel;
+
+  /// No description provided for @macroTargetValueLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Target (g)'**
+  String get macroTargetValueLabel;
+
+  /// No description provided for @macroOptimizeButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Optimize'**
+  String get macroOptimizeButton;
+
+  /// No description provided for @macroOptimizing.
+  ///
+  /// In en, this message translates to:
+  /// **'Optimizing…'**
+  String get macroOptimizing;
+
+  /// No description provided for @macroOptimizationResultTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Suggestions'**
+  String get macroOptimizationResultTitle;
+
+  /// No description provided for @macroUpdatedMacrosLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Updated macros (estimate)'**
+  String get macroUpdatedMacrosLabel;
+
+  /// No description provided for @mealPlanCreateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create weekly meal plan'**
+  String get mealPlanCreateTitle;
+
+  /// No description provided for @mealPlanDaysLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Which days?'**
+  String get mealPlanDaysLabel;
+
+  /// No description provided for @mealPlanTotalCaloriesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Total calories (optional)'**
+  String get mealPlanTotalCaloriesLabel;
+
+  /// No description provided for @mealPlanGenerateButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate plan'**
+  String get mealPlanGenerateButton;
+
+  /// No description provided for @mealPlanGenerating.
+  ///
+  /// In en, this message translates to:
+  /// **'Generating plan…'**
+  String get mealPlanGenerating;
+
+  /// No description provided for @mealPlanCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan created'**
+  String get mealPlanCreated;
+
+  /// No description provided for @mealPlanAddAllToShopping.
+  ///
+  /// In en, this message translates to:
+  /// **'Add all to shopping list'**
+  String get mealPlanAddAllToShopping;
+
+  /// No description provided for @mealPlanAddedToShopping.
+  ///
+  /// In en, this message translates to:
+  /// **'Added plan ingredients to shopping list'**
+  String get mealPlanAddedToShopping;
+
   /// No description provided for @featMacroOptimize.
   ///
   /// In en, this message translates to:
@@ -597,6 +867,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Weekly meal plan'**
   String get featWeeklyMealPlan;
+
+  /// No description provided for @advancedFiltersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Advanced filters'**
+  String get advancedFiltersTitle;
+
+  /// No description provided for @filterCookTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Cook time'**
+  String get filterCookTime;
+
+  /// No description provided for @filterAny.
+  ///
+  /// In en, this message translates to:
+  /// **'Any'**
+  String get filterAny;
+
+  /// No description provided for @filterUpToMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'Up to {minutes} min'**
+  String filterUpToMinutes(int minutes);
+
+  /// No description provided for @filter45Plus.
+  ///
+  /// In en, this message translates to:
+  /// **'45+ min'**
+  String get filter45Plus;
+
+  /// No description provided for @filterCaloriesMin.
+  ///
+  /// In en, this message translates to:
+  /// **'Calories (min)'**
+  String get filterCaloriesMin;
+
+  /// No description provided for @filterCaloriesMax.
+  ///
+  /// In en, this message translates to:
+  /// **'Calories (max)'**
+  String get filterCaloriesMax;
+
+  /// No description provided for @filterDifficulty.
+  ///
+  /// In en, this message translates to:
+  /// **'Difficulty'**
+  String get filterDifficulty;
+
+  /// No description provided for @filterExcludeIngredients.
+  ///
+  /// In en, this message translates to:
+  /// **'Exclude ingredients'**
+  String get filterExcludeIngredients;
+
+  /// No description provided for @filterFavoriteIngredients.
+  ///
+  /// In en, this message translates to:
+  /// **'Favorite ingredients'**
+  String get filterFavoriteIngredients;
+
+  /// No description provided for @filterCommaSeparatedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Comma-separated (e.g., onion, garlic)'**
+  String get filterCommaSeparatedHint;
+
+  /// No description provided for @clearAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear all'**
+  String get clearAll;
+
+  /// No description provided for @applyFilters.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply filters'**
+  String get applyFilters;
 
   /// No description provided for @featNutritionAnalysis.
   ///
@@ -1935,6 +2283,136 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Add to shopping list'**
   String get addToShoppingListShort;
+
+  /// No description provided for @sortTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Sort'**
+  String get sortTooltip;
+
+  /// No description provided for @sortBestMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Best match'**
+  String get sortBestMatch;
+
+  /// No description provided for @sortNewest.
+  ///
+  /// In en, this message translates to:
+  /// **'New'**
+  String get sortNewest;
+
+  /// No description provided for @sortPopular.
+  ///
+  /// In en, this message translates to:
+  /// **'Popular'**
+  String get sortPopular;
+
+  /// No description provided for @sortRating.
+  ///
+  /// In en, this message translates to:
+  /// **'Rating'**
+  String get sortRating;
+
+  /// No description provided for @matchPerfectShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Perfect match ✓'**
+  String get matchPerfectShort;
+
+  /// No description provided for @matchNeedPrefix.
+  ///
+  /// In en, this message translates to:
+  /// **'Need:'**
+  String get matchNeedPrefix;
+
+  /// No description provided for @inventorySearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search inventory'**
+  String get inventorySearchHint;
+
+  /// No description provided for @inventoryEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No items yet'**
+  String get inventoryEmptyTitle;
+
+  /// No description provided for @inventoryEmptyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Add items from the Kitchen tab to start matching recipes.'**
+  String get inventoryEmptyBody;
+
+  /// No description provided for @inventoryNoResults.
+  ///
+  /// In en, this message translates to:
+  /// **'No results'**
+  String get inventoryNoResults;
+
+  /// No description provided for @inventoryTryDifferentSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Try a different search.'**
+  String get inventoryTryDifferentSearch;
+
+  /// No description provided for @inventoryEditItemTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit item'**
+  String get inventoryEditItemTitle;
+
+  /// No description provided for @inventoryItemNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Item name'**
+  String get inventoryItemNameLabel;
+
+  /// No description provided for @inventoryAmountLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount'**
+  String get inventoryAmountLabel;
+
+  /// No description provided for @inventoryEmojiLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Emoji'**
+  String get inventoryEmojiLabel;
+
+  /// No description provided for @inventorySavedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved'**
+  String get inventorySavedToast;
+
+  /// No description provided for @inventoryAddFailedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not add item. Please try again.'**
+  String get inventoryAddFailedToast;
+
+  /// No description provided for @inventoryUnitMismatchTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit doesn\'t match'**
+  String get inventoryUnitMismatchTitle;
+
+  /// No description provided for @inventoryUseExistingUnitCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Use existing unit'**
+  String get inventoryUseExistingUnitCta;
+
+  /// No description provided for @inventoryUnitMismatchBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{item} is already tracked as {existingUnit}. You picked {pickedUnit}.'**
+  String inventoryUnitMismatchBody(
+    String item,
+    String existingUnit,
+    String pickedUnit,
+  );
 }
 
 class _AppLocalizationsDelegate

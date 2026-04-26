@@ -11,10 +11,6 @@ class AuthScreen extends StatefulWidget {
 }
 
 class _AuthScreenState extends State<AuthScreen> {
-  static const _primary = Color(0xFF00ACC1);
-  static const _text = Color(0xFF1A1A2E);
-  static const _muted = Color(0xFF9E9E9E);
-
   final _fullName = TextEditingController();
   final _email = TextEditingController();
   final _password = TextEditingController();
@@ -35,29 +31,13 @@ class _AuthScreenState extends State<AuthScreen> {
     super.dispose();
   }
 
-  InputDecoration _fieldDecoration(String label) {
+  InputDecoration _fieldDecoration(BuildContext context, String label) {
+    final cs = Theme.of(context).colorScheme;
     return InputDecoration(
       labelText: label,
       floatingLabelBehavior: FloatingLabelBehavior.auto,
-      filled: true,
-      fillColor: Colors.white,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: _primary, width: 1.5),
-      ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      labelStyle: const TextStyle(
-        color: _muted,
-        fontWeight: FontWeight.w500,
-      ),
+      labelStyle: TextStyle(color: cs.onSurfaceVariant, fontWeight: FontWeight.w500),
     );
   }
 
@@ -113,10 +93,18 @@ class _AuthScreenState extends State<AuthScreen> {
           );
         }
       } else {
-        await SupabaseService.instance.signInWithEmail(
+        final res = await SupabaseService.instance.signInWithEmail(
           email: email,
           password: password,
         );
+        final user = res.user ?? SupabaseService.instance.currentUser;
+        if (user != null) {
+          await SupabaseService.instance.upsertUserProfile(
+            userId: user.id,
+            email: user.email ?? email,
+            fullName: null,
+          );
+        }
       }
     } on FriendlyAuthException catch (e) {
       _showError(e.message);
@@ -135,7 +123,7 @@ class _AuthScreenState extends State<AuthScreen> {
         content: TextField(
           controller: controller,
           keyboardType: TextInputType.emailAddress,
-          decoration: _fieldDecoration(l10n.authEmail),
+          decoration: _fieldDecoration(ctx, l10n.authEmail),
         ),
         actions: [
           TextButton(
@@ -172,9 +160,9 @@ class _AuthScreenState extends State<AuthScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
@@ -186,15 +174,15 @@ class _AuthScreenState extends State<AuthScreen> {
                   width: 72,
                   height: 72,
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF00ACC1), Color(0xFF00838F)],
+                    gradient: LinearGradient(
+                      colors: [cs.primary, cs.tertiary],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                     borderRadius: BorderRadius.circular(22),
                     boxShadow: [
                       BoxShadow(
-                        color: _primary.withValues(alpha: 0.35),
+                        color: cs.primary.withValues(alpha: 0.28),
                         blurRadius: 20,
                         offset: const Offset(0, 8),
                       ),
@@ -209,10 +197,10 @@ class _AuthScreenState extends State<AuthScreen> {
               Text(
                 _isSignUp ? l10n.authHeadlineSignUp : l10n.authHeadlineSignIn,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 26,
                   fontWeight: FontWeight.w800,
-                  color: _text,
+                  color: cs.onSurface,
                   letterSpacing: -0.6,
                   height: 1.15,
                 ),
@@ -221,9 +209,9 @@ class _AuthScreenState extends State<AuthScreen> {
               Text(
                 _isSignUp ? l10n.authSubSignUp : l10n.authSubSignIn,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 15,
-                  color: _muted,
+                  color: cs.onSurfaceVariant,
                   height: 1.5,
                 ),
               ),
@@ -240,9 +228,9 @@ class _AuthScreenState extends State<AuthScreen> {
               Container(
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: cs.surface,
                   borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: const Color(0xFFF0F0F0)),
+                  border: Border.all(color: cs.outlineVariant),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -251,7 +239,7 @@ class _AuthScreenState extends State<AuthScreen> {
                       TextField(
                         controller: _fullName,
                         textInputAction: TextInputAction.next,
-                        decoration: _fieldDecoration(l10n.authFullName),
+                        decoration: _fieldDecoration(context, l10n.authFullName),
                       ),
                       const SizedBox(height: 14),
                     ],
@@ -260,7 +248,7 @@ class _AuthScreenState extends State<AuthScreen> {
                       keyboardType: TextInputType.emailAddress,
                       autocorrect: false,
                       textInputAction: TextInputAction.next,
-                      decoration: _fieldDecoration(l10n.authEmail),
+                      decoration: _fieldDecoration(context, l10n.authEmail),
                     ),
                     const SizedBox(height: 14),
                     TextField(
@@ -268,13 +256,13 @@ class _AuthScreenState extends State<AuthScreen> {
                       obscureText: _obscurePassword,
                       textInputAction:
                           _isSignUp ? TextInputAction.next : TextInputAction.done,
-                      decoration: _fieldDecoration(l10n.authPassword).copyWith(
+                      decoration: _fieldDecoration(context, l10n.authPassword).copyWith(
                         suffixIcon: IconButton(
                           icon: Icon(
                             _obscurePassword
                                 ? Icons.visibility_outlined
                                 : Icons.visibility_off_outlined,
-                            color: _muted,
+                            color: cs.onSurfaceVariant,
                             size: 22,
                           ),
                           onPressed: () => setState(
@@ -289,13 +277,13 @@ class _AuthScreenState extends State<AuthScreen> {
                         obscureText: _obscureConfirm,
                         textInputAction: TextInputAction.done,
                         decoration:
-                            _fieldDecoration(l10n.authConfirmPassword).copyWith(
+                            _fieldDecoration(context, l10n.authConfirmPassword).copyWith(
                           suffixIcon: IconButton(
                             icon: Icon(
                               _obscureConfirm
                                   ? Icons.visibility_outlined
                                   : Icons.visibility_off_outlined,
-                              color: _muted,
+                              color: cs.onSurfaceVariant,
                               size: 22,
                             ),
                             onPressed: () => setState(
@@ -309,7 +297,7 @@ class _AuthScreenState extends State<AuthScreen> {
                         children: [
                           Checkbox(
                             value: _termsAccepted,
-                            activeColor: _primary,
+                            activeColor: cs.primary,
                             onChanged: (v) =>
                                 setState(() => _termsAccepted = v ?? false),
                           ),
@@ -325,10 +313,10 @@ class _AuthScreenState extends State<AuthScreen> {
                                     ),
                                     child: Text(
                                       l10n.authTermsAgree,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 13.5,
                                         height: 1.35,
-                                        color: _text,
+                                        color: cs.onSurface,
                                         fontWeight: FontWeight.w500,
                                       ),
                                     ),
@@ -370,7 +358,7 @@ class _AuthScreenState extends State<AuthScreen> {
                           onPressed:
                               _submitting ? null : () => _forgotPassword(l10n),
                           style: TextButton.styleFrom(
-                            foregroundColor: _primary,
+                            foregroundColor: cs.primary,
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 4, vertical: 4),
                           ),
@@ -433,7 +421,7 @@ class _AuthScreenState extends State<AuthScreen> {
                     _isSignUp
                         ? l10n.authToggleHasAccount
                         : l10n.authToggleNoAccount,
-                    style: const TextStyle(color: _muted, fontSize: 14),
+                    style: TextStyle(color: cs.onSurfaceVariant, fontSize: 14),
                   ),
                   const SizedBox(width: 6),
                   TextButton(
@@ -444,7 +432,7 @@ class _AuthScreenState extends State<AuthScreen> {
                               if (!_isSignUp) _confirm.clear();
                             }),
                     style: TextButton.styleFrom(
-                      foregroundColor: _primary,
+                      foregroundColor: cs.primary,
                       padding: EdgeInsets.zero,
                       minimumSize: Size.zero,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -482,12 +470,13 @@ class _ModeToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cs.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFF0F0F0)),
+        border: Border.all(color: cs.outlineVariant),
       ),
       child: Row(
         children: [
@@ -524,6 +513,7 @@ class _ModeChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -534,7 +524,7 @@ class _ModeChip extends StatelessWidget {
           curve: Curves.easeOut,
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: selected ? const Color(0xFF00ACC1) : Colors.transparent,
+            color: selected ? cs.primary : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
@@ -544,7 +534,7 @@ class _ModeChip extends StatelessWidget {
               fontSize: 14.5,
               fontWeight: FontWeight.w700,
               letterSpacing: -0.2,
-              color: selected ? Colors.white : const Color(0xFF9E9E9E),
+              color: selected ? cs.onPrimary : cs.onSurfaceVariant,
             ),
           ),
         ),

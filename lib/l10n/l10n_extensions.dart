@@ -152,6 +152,31 @@ extension MealPrepL10nX on AppLocalizations {
     switch (code) {
       case 'pcs':
         return unitPcs;
+      // Common Turkish recipe units (dataset)
+      case 'tk':
+        return 'çay kaşığı';
+      case 'tkk':
+        return 'tatlı kaşığı';
+      case 'yk':
+        return 'yemek kaşığı';
+      case 'sb':
+        return 'su bardağı';
+      case 'çb':
+        return 'çay bardağı';
+      case 'tb':
+        return 'tatlı bardağı';
+      case 'tutam':
+        return 'tutam';
+      case 'demet':
+        return 'demet';
+      case 'paket':
+        return 'paket';
+      case 'dilim':
+        return 'dilim';
+      case 'kase':
+        return 'kase';
+      case 'adet':
+        return 'adet';
       case 'g':
         return unitG;
       case 'kg':
@@ -234,7 +259,7 @@ extension MealPrepL10nX on AppLocalizations {
   /// Localizes fixed recipe amount tokens like [To taste].
   String formatIngredientAmount(String amount) {
     if (amount == 'To taste') return amtToTaste;
-    return amount;
+    return amount.trim();
   }
 
   /// Localized difficulty label; [difficulty] is Turkish from data ("Kolay", "Orta").

@@ -14,23 +14,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final _pageController = PageController();
   int _currentPage = 0;
 
-  static const _slideVisuals = [
-    (
-      emoji: '🥗',
-      bgGradient: [Color(0xFF00ACC1), Color(0xFF00838F)],
-    ),
-    (
-      emoji: '👨‍🍳',
-      bgGradient: [Color(0xFF26A69A), Color(0xFF00695C)],
-    ),
-    (
-      emoji: '🛒',
-      bgGradient: [Color(0xFF00ACC1), Color(0xFF0097A7)],
-    ),
-  ];
-
   void _goNext() {
-    if (_currentPage < _slideVisuals.length - 1) {
+    if (_currentPage < 3 - 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
@@ -62,10 +47,25 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final isLast = _currentPage == _slideVisuals.length - 1;
+    final cs = Theme.of(context).colorScheme;
+    final slideVisuals = [
+      (
+        emoji: '🥗',
+        bgGradient: <Color>[cs.primary, cs.tertiary],
+      ),
+      (
+        emoji: '👨‍🍳',
+        bgGradient: <Color>[cs.tertiary, cs.secondary],
+      ),
+      (
+        emoji: '🛒',
+        bgGradient: <Color>[cs.secondary, cs.primary],
+      ),
+    ];
+    final isLast = _currentPage == slideVisuals.length - 1;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: cs.surface,
       body: SafeArea(
         child: Column(
           children: [
@@ -80,7 +80,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       TextButton(
                         onPressed: widget.onDone,
                         style: TextButton.styleFrom(
-                          foregroundColor: const Color(0xFF9E9E9E),
+                          foregroundColor: cs.onSurfaceVariant,
                         ),
                         child: Text(
                           l10n.skip,
@@ -98,9 +98,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               child: PageView.builder(
                 controller: _pageController,
                 onPageChanged: (i) => setState(() => _currentPage = i),
-                itemCount: _slideVisuals.length,
+                itemCount: slideVisuals.length,
                 itemBuilder: (context, index) {
-                  final v = _slideVisuals[index];
+                  final v = slideVisuals[index];
                   final t = _texts(l10n, index);
                   return _SlidePage(
                     emoji: v.emoji,
@@ -118,7 +118,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: List.generate(
-                      _slideVisuals.length,
+                      slideVisuals.length,
                       (i) => _Dot(active: i == _currentPage),
                     ),
                   ),
@@ -173,6 +173,7 @@ class _SlidePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 28),
       child: Column(
@@ -208,10 +209,10 @@ class _SlidePage extends StatelessWidget {
                 Text(
                   title,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 26,
                     fontWeight: FontWeight.w800,
-                    color: Color(0xFF1A1A2E),
+                    color: cs.onSurface,
                     letterSpacing: -0.6,
                     height: 1.2,
                   ),
@@ -220,9 +221,9 @@ class _SlidePage extends StatelessWidget {
                 Text(
                   subtitle,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 15,
-                    color: Color(0xFF9E9E9E),
+                    color: cs.onSurfaceVariant,
                     height: 1.6,
                   ),
                 ),
@@ -242,13 +243,14 @@ class _Dot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       margin: const EdgeInsets.symmetric(horizontal: 4),
       width: active ? 22 : 8,
       height: 8,
       decoration: BoxDecoration(
-        color: active ? const Color(0xFF00ACC1) : const Color(0xFFE0E0E0),
+        color: active ? cs.primary : cs.outlineVariant,
         borderRadius: BorderRadius.circular(4),
       ),
     );

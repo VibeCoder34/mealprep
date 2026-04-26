@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'dart:typed_data';
 import '../app_state.dart';
+import '../data/turkish_shopping_catalog.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n_extensions.dart';
 import '../models/inventory_item.dart';
-import 'camera_capture_screen.dart';
+import '../services/ingredient_normalizer.dart';
+import '../services/unit_system.dart';
 
 class AddInventoryScreen extends StatefulWidget {
   final AppState appState;
@@ -15,545 +16,31 @@ class AddInventoryScreen extends StatefulWidget {
   State<AddInventoryScreen> createState() => _AddInventoryScreenState();
 }
 
-class _AddInventoryScreenState extends State<AddInventoryScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
+class _AddInventoryScreenState extends State<AddInventoryScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 19),
-          color: const Color(0xFF1A1A2E),
+          color: cs.onSurface,
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
           l10n.addToPantryTitle,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w700,
-            color: Color(0xFF1A1A2E),
+            color: cs.onSurface,
             letterSpacing: -0.3,
           ),
         ),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(48),
-          child: Container(
-            decoration: const BoxDecoration(
-              border: Border(bottom: BorderSide(color: Color(0xFFF0F0F0))),
-            ),
-            child: TabBar(
-              controller: _tabController,
-              labelColor: const Color(0xFF00ACC1),
-              unselectedLabelColor: const Color(0xFF9E9E9E),
-              indicatorColor: const Color(0xFF00ACC1),
-              indicatorWeight: 2.5,
-              indicatorSize: TabBarIndicatorSize.label,
-              labelStyle: const TextStyle(
-                  fontWeight: FontWeight.w600, fontSize: 14.5),
-              unselectedLabelStyle: const TextStyle(
-                  fontWeight: FontWeight.w500, fontSize: 14.5),
-              tabs: [
-                Tab(text: '📷  ${l10n.tabPhoto}'),
-                Tab(text: '✏️  ${l10n.tabManual}'),
-              ],
-            ),
-          ),
-        ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _PhotoTab(appState: widget.appState),
-          _ManualTab(appState: widget.appState),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── Photo Tab ────────────────────────────────────────────────────────────────
-
-class _PhotoTab extends StatefulWidget {
-  final AppState appState;
-
-  const _PhotoTab({required this.appState});
-
-  @override
-  State<_PhotoTab> createState() => _PhotoTabState();
-}
-
-class _PhotoTabState extends State<_PhotoTab> {
-  bool _hasScanned = false;
-  final List<_DetectedItem> _detectedItems = [];
-  Uint8List? _photoBytes;
-  bool _saving = false;
-
-  Future<void> _openCamera() async {
-    final bytes = await Navigator.of(context).push<Uint8List>(
-      MaterialPageRoute(builder: (_) => const CameraCaptureScreen()),
-    );
-    if (!mounted) return;
-    if (bytes == null) return;
-    setState(() {
-      _photoBytes = bytes;
-      _hasScanned = false;
-      _detectedItems.clear();
-    });
-  }
-
-  void _simulateScan() {
-    setState(() {
-      _hasScanned = true;
-      _detectedItems
-        ..clear()
-        ..addAll([
-          _DetectedItem(name: 'Tomato', emoji: '🍅', quantity: 3, unit: 'pcs'),
-          _DetectedItem(name: 'Cucumber', emoji: '🥒', quantity: 2, unit: 'pcs'),
-          _DetectedItem(name: 'Cheese', emoji: '🧀', quantity: 150, unit: 'g'),
-          _DetectedItem(name: 'Parsley', emoji: '🌿', quantity: 1, unit: 'bunch'),
-        ]);
-    });
-  }
-
-  Future<void> _addAll() async {
-    final l10n = AppLocalizations.of(context)!;
-    final count = _detectedItems.length;
-    if (_saving) return;
-    setState(() => _saving = true);
-    for (final item in _detectedItems) {
-      await widget.appState.addItem(
-        InventoryItem(
-          id: '${DateTime.now().millisecondsSinceEpoch}_${item.name}',
-          name: item.name,
-          emoji: item.emoji,
-          quantity: item.quantity,
-          unit: item.unit,
-        ),
-      );
-    }
-    if (!mounted) return;
-    Navigator.of(context).pop();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(l10n.itemsAddedToPantry(count)),
-        backgroundColor: const Color(0xFF00ACC1),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        margin: const EdgeInsets.all(16),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return _hasScanned ? _buildResultsView() : _buildCameraView();
-  }
-
-  Widget _buildCameraView() {
-    final l10n = AppLocalizations.of(context)!;
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const SizedBox(height: 4),
-          GestureDetector(
-            onTap: _openCamera,
-            child: Container(
-              height: 260,
-              decoration: BoxDecoration(
-                color: const Color(0xFFF5F7FA),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: const Color(0xFFE0E0E0), width: 1.5),
-              ),
-              child: _photoBytes == null
-                  ? Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const _IconBox(
-                          icon: Icons.camera_alt_outlined,
-                          color: Color(0xFF00ACC1),
-                          bg: Color(0xFFE0F7FA),
-                        ),
-                        const SizedBox(height: 18),
-                        Text(
-                          l10n.cameraPreview,
-                          style: const TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF424242),
-                            letterSpacing: -0.3,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          l10n.cameraHint,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontSize: 13.5,
-                            color: Color(0xFF9E9E9E),
-                            height: 1.5,
-                          ),
-                        ),
-                      ],
-                    )
-                  : ClipRRect(
-                      borderRadius: BorderRadius.circular(24),
-                      child: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          Image.memory(
-                            _photoBytes!,
-                            fit: BoxFit.cover,
-                          ),
-                          Container(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                                colors: [
-                                  Colors.black.withValues(alpha: 0.25),
-                                  Colors.transparent,
-                                  Colors.black.withValues(alpha: 0.35),
-                                ],
-                              ),
-                            ),
-                          ),
-                          Align(
-                            alignment: Alignment.bottomLeft,
-                            child: Padding(
-                              padding: const EdgeInsets.all(14),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                    decoration: BoxDecoration(
-                                      color: Colors.black.withValues(alpha: 0.45),
-                                      borderRadius: BorderRadius.circular(999),
-                                      border: Border.all(color: Colors.white10),
-                                    ),
-                                    child: const Text(
-                                      'Fotoğraf hazır',
-                                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12.5),
-                                    ),
-                                  ),
-                                  const Spacer(),
-                                  IconButton(
-                                    onPressed: _openCamera,
-                                    icon: const Icon(Icons.refresh_rounded, color: Colors.white),
-                                    tooltip: l10n.retake,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          ElevatedButton.icon(
-            onPressed: _openCamera,
-            icon: const Icon(Icons.camera_alt_rounded, size: 20),
-            label: Text(l10n.takePhoto),
-          ),
-          const SizedBox(height: 10),
-          OutlinedButton.icon(
-            onPressed: _openCamera,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: const Color(0xFF00ACC1),
-              side: const BorderSide(color: Color(0xFF00ACC1), width: 1.5),
-              padding: const EdgeInsets.symmetric(vertical: 15),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14)),
-              textStyle: const TextStyle(
-                  fontWeight: FontWeight.w600, fontSize: 15),
-            ),
-            icon: const Icon(Icons.photo_library_outlined, size: 20),
-            label: Text(l10n.chooseFromLibrary),
-          ),
-          if (_photoBytes != null) ...[
-            const SizedBox(height: 14),
-            ElevatedButton.icon(
-              onPressed: _simulateScan,
-              icon: const Icon(Icons.auto_awesome_rounded, size: 20),
-              label: const Text('Taramayı başlat (mock)'),
-            ),
-          ],
-          const SizedBox(height: 22),
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFF9E6),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFFFFE082)),
-            ),
-            child: Row(
-              children: [
-                const Text('💡', style: TextStyle(fontSize: 20)),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    l10n.aiPhotoTip,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Color(0xFF6D4C41),
-                      height: 1.45,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildResultsView() {
-    final l10n = AppLocalizations.of(context)!;
-    return Column(
-      children: [
-        Container(
-          margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          decoration: BoxDecoration(
-            color: const Color(0xFFE0F7FA),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Row(
-            children: [
-              const Text('✅', style: TextStyle(fontSize: 17)),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  l10n.itemsDetectedBanner(_detectedItems.length),
-                  style: const TextStyle(
-                    color: Color(0xFF00695C),
-                    fontWeight: FontWeight.w500,
-                    fontSize: 13.5,
-                  ),
-                ),
-              ),
-              GestureDetector(
-                onTap: () => setState(() => _hasScanned = false),
-                child: Text(
-                  l10n.retake,
-                  style: const TextStyle(
-                    color: Color(0xFF00ACC1),
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            itemCount: _detectedItems.length,
-            itemBuilder: (context, index) {
-              final item = _detectedItems[index];
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: _DetectedItemTile(
-                  item: item,
-                  onRemove: () =>
-                      setState(() => _detectedItems.removeAt(index)),
-                  onQuantityChanged: (q) =>
-                      setState(() => item.quantity = q),
-                ),
-              );
-            },
-          ),
-        ),
-        SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-            child: SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _detectedItems.isEmpty || _saving ? null : _addAll,
-                child: _saving
-                    ? const SizedBox(
-                        width: 22,
-                        height: 22,
-                        child: CircularProgressIndicator(strokeWidth: 2.4),
-                      )
-                    : Text(l10n.addAllCount(_detectedItems.length)),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _DetectedItem {
-  final String name;
-  final String emoji;
-  int quantity;
-  final String unit;
-
-  _DetectedItem({
-    required this.name,
-    required this.emoji,
-    required this.quantity,
-    required this.unit,
-  });
-}
-
-class _DetectedItemTile extends StatelessWidget {
-  final _DetectedItem item;
-  final VoidCallback onRemove;
-  final ValueChanged<int> onQuantityChanged;
-
-  const _DetectedItemTile({
-    required this.item,
-    required this.onRemove,
-    required this.onQuantityChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFF0F0F0)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF5F7FA),
-              borderRadius: BorderRadius.circular(11),
-            ),
-            child: Center(
-              child: Text(item.emoji, style: const TextStyle(fontSize: 24)),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              l10n.ingredientLabel(item.name),
-              style: const TextStyle(
-                fontSize: 15.5,
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF1A1A2E),
-              ),
-            ),
-          ),
-          _MiniStepper(
-            value: item.quantity,
-            onDecrement:
-                item.quantity > 1 ? () => onQuantityChanged(item.quantity - 1) : null,
-            onIncrement: () => onQuantityChanged(item.quantity + 1),
-          ),
-          const SizedBox(width: 10),
-          GestureDetector(
-            onTap: onRemove,
-            child: Container(
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFF0F0),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(Icons.close_rounded,
-                  size: 16, color: Color(0xFFFF5252)),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MiniStepper extends StatelessWidget {
-  final int value;
-  final VoidCallback? onDecrement;
-  final VoidCallback onIncrement;
-
-  const _MiniStepper({
-    required this.value,
-    this.onDecrement,
-    required this.onIncrement,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        _StepBtn(icon: Icons.remove_rounded, enabled: onDecrement != null, onTap: onDecrement),
-        SizedBox(
-          width: 32,
-          child: Text(
-            '$value',
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF1A1A2E),
-            ),
-          ),
-        ),
-        _StepBtn(icon: Icons.add_rounded, enabled: true, onTap: onIncrement),
-      ],
-    );
-  }
-}
-
-class _StepBtn extends StatelessWidget {
-  final IconData icon;
-  final bool enabled;
-  final VoidCallback? onTap;
-
-  const _StepBtn({required this.icon, required this.enabled, this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 30,
-        height: 30,
-        decoration: BoxDecoration(
-          color: enabled ? const Color(0xFFE0F7FA) : const Color(0xFFF5F5F5),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Icon(
-          icon,
-          size: 17,
-          color: enabled ? const Color(0xFF00ACC1) : const Color(0xFFCCCCCC),
-        ),
-      ),
+      body: _ManualTab(appState: widget.appState),
     );
   }
 }
@@ -571,6 +58,9 @@ class _ManualTab extends StatefulWidget {
 
 class _ManualTabState extends State<_ManualTab> {
   final _nameController = TextEditingController();
+  final _nameFocusNode = FocusNode();
+  final _normalizer = const IngredientNormalizer();
+  final _unitSystem = const UnitSystem();
   int _quantity = 1;
   String _unit = 'pcs';
 
@@ -647,24 +137,147 @@ class _ManualTabState extends State<_ManualTab> {
     return '🥫';
   }
 
+  List<String> _nameSuggestions(String raw) {
+    final q = raw.trim().toLowerCase();
+    if (q.isEmpty) return const [];
+
+    final inv = widget.appState.inventory.map((i) => i.name).toList(growable: false);
+    final catalog = filterTurkishShoppingSuggestions(q);
+
+    // De-dupe by normalized key so "Domates" and "domates" appear once.
+    final byKey = <String, String>{};
+
+    void addCandidate(String s) {
+      final raw = s.trim();
+      if (raw.isEmpty) return;
+      final key = _normalizer.normalize(raw);
+      if (key.isEmpty) return;
+      byKey.putIfAbsent(key, () => raw);
+    }
+
+    for (final s in inv) addCandidate(s);
+    for (final s in catalog) addCandidate(s);
+
+    final sorted = byKey.values.toList(growable: false)
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+
+    final matches = <String>[];
+    for (final s in sorted) {
+      if (s.toLowerCase().contains(q)) {
+        matches.add(s);
+        if (matches.length >= 8) break;
+      }
+    }
+    return matches;
+  }
+
+  Future<void> _showUnitMismatchDialog({
+    required String typedName,
+    required String existingName,
+    required String existingUnit,
+    required String pickedUnit,
+  }) async {
+    final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.inventoryUnitMismatchTitle),
+        content: Text(
+          l10n.inventoryUnitMismatchBody(
+            l10n.ingredientLabel(existingName),
+            l10n.unitLabel(existingUnit),
+            l10n.unitLabel(pickedUnit),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: cs.primary),
+            onPressed: () {
+              setState(() => _unit = existingUnit);
+              Navigator.of(ctx).pop();
+            },
+            child: Text(l10n.inventoryUseExistingUnitCta),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _addItem() async {
     final name = _nameController.text.trim();
     if (name.isEmpty) return;
 
-    await widget.appState.addItem(InventoryItem(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      name: name,
-      emoji: _getEmoji(name),
-      quantity: _quantity,
-      unit: _unit,
-    ));
+    final itemKey = _normalizer.normalize(name);
+    final unitGroup = _unitSystem.groupKey(_unitSystem.groupOf(_unit));
+
+    try {
+      await widget.appState.addItem(InventoryItem(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        name: name,
+        emoji: _getEmoji(name),
+        quantity: _quantity,
+        unit: _unit,
+        itemKey: itemKey,
+        unitGroup: unitGroup,
+      ));
+    } on StateError catch (e) {
+      // Prevent crashes for unit mismatch; guide user to a compatible unit instead.
+      if (!mounted) return;
+      final existing = widget.appState.inventory.cast<InventoryItem?>().firstWhere(
+            (i) => i != null && _normalizer.normalize(i.name) == itemKey,
+            orElse: () => null,
+          );
+
+      if (e.message == 'unit_group_mismatch' && existing != null) {
+        await _showUnitMismatchDialog(
+          typedName: name,
+          existingName: existing.name,
+          existingUnit: existing.unit,
+          pickedUnit: _unit,
+        );
+        return;
+      }
+
+      final l10n = AppLocalizations.of(context)!;
+      final cs = Theme.of(context).colorScheme;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.inventoryAddFailedToast),
+          backgroundColor: cs.error,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.all(16),
+        ),
+      );
+      return;
+    } catch (_) {
+      if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
+      final cs = Theme.of(context).colorScheme;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.inventoryAddFailedToast),
+          backgroundColor: cs.error,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.all(16),
+        ),
+      );
+      return;
+    }
 
     if (!mounted) return;
     final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(l10n.itemAdded(name)),
-        backgroundColor: const Color(0xFF00ACC1),
+        backgroundColor: cs.primary,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.all(16),
@@ -682,12 +295,14 @@ class _ManualTabState extends State<_ManualTab> {
   @override
   void dispose() {
     _nameController.dispose();
+    _nameFocusNode.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
       child: Column(
@@ -695,38 +310,60 @@ class _ManualTabState extends State<_ManualTab> {
         children: [
           _FieldLabel(l10n.itemName),
           const SizedBox(height: 8),
-          TextField(
-            controller: _nameController,
-            textCapitalization: TextCapitalization.words,
-            style: const TextStyle(
-              fontSize: 15.5,
-              color: Color(0xFF1A1A2E),
-              fontWeight: FontWeight.w500,
-            ),
-            decoration: InputDecoration(
-              hintText: l10n.nameHint,
-              hintStyle: const TextStyle(
-                  color: Color(0xFFBDBDBD), fontWeight: FontWeight.w400),
-              prefixIcon: const Icon(Icons.edit_outlined,
-                  color: Color(0xFFBDBDBD), size: 20),
-              filled: true,
-              fillColor: const Color(0xFFF5F7FA),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide.none,
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(color: Color(0xFFE8E8E8)),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide:
-                    const BorderSide(color: Color(0xFF00ACC1), width: 2),
-              ),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-            ),
+          RawAutocomplete<String>(
+            textEditingController: _nameController,
+            focusNode: _nameFocusNode,
+            optionsBuilder: (value) => _nameSuggestions(value.text),
+            displayStringForOption: (o) => o,
+            onSelected: (o) => setState(() => _nameController.text = o),
+            fieldViewBuilder: (context, ctrl, focus, onSubmit) {
+              return TextField(
+                controller: ctrl,
+                focusNode: focus,
+                textCapitalization: TextCapitalization.words,
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
+                decoration: InputDecoration(
+                  hintText: l10n.nameHint,
+                  hintStyle: TextStyle(color: cs.onSurfaceVariant, fontWeight: FontWeight.w400),
+                  prefixIcon: Icon(Icons.search_rounded, color: cs.onSurfaceVariant, size: 20),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                ),
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => _addItem(),
+              );
+            },
+            optionsViewBuilder: (context, onSelected, options) {
+              if (options.isEmpty) return const SizedBox.shrink();
+              return Align(
+                alignment: Alignment.topLeft,
+                child: Material(
+                  elevation: 6,
+                  borderRadius: BorderRadius.circular(14),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 260, maxWidth: 520),
+                    child: ListView.separated(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      shrinkWrap: true,
+                      itemCount: options.length,
+                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      itemBuilder: (context, index) {
+                        final o = options.elementAt(index);
+                        return ListTile(
+                          dense: true,
+                          leading: Text(_getEmoji(o), style: const TextStyle(fontSize: 20)),
+                          title: Text(l10n.ingredientLabel(o)),
+                          onTap: () => onSelected(o),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
           const SizedBox(height: 24),
           _FieldLabel(l10n.quantity),
@@ -735,9 +372,9 @@ class _ManualTabState extends State<_ManualTab> {
             children: [
               Container(
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF5F7FA),
+                  color: cs.surfaceContainer,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFFE8E8E8)),
+                  border: Border.all(color: cs.outlineVariant),
                 ),
                 child: Row(
                   children: [
@@ -753,10 +390,10 @@ class _ManualTabState extends State<_ManualTab> {
                       child: Text(
                         '$_quantity',
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF1A1A2E),
+                          color: cs.onSurface,
                         ),
                       ),
                     ),
@@ -774,19 +411,15 @@ class _ManualTabState extends State<_ManualTab> {
                   height: 54,
                   padding: const EdgeInsets.symmetric(horizontal: 14),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF5F7FA),
+                    color: cs.surfaceContainer,
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0xFFE8E8E8)),
+                    border: Border.all(color: cs.outlineVariant),
                   ),
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
                       value: _unit,
                       isExpanded: true,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF1A1A2E),
-                      ),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
                       items: _units
                           .map((u) => DropdownMenuItem(
                                 value: u,
@@ -811,7 +444,7 @@ class _ManualTabState extends State<_ManualTab> {
             ),
           ),
           const SizedBox(height: 32),
-          const Divider(color: Color(0xFFF0F0F0), height: 1),
+          const Divider(height: 1),
           const SizedBox(height: 20),
           _FieldLabel(l10n.quickAdd),
           const SizedBox(height: 12),
@@ -829,17 +462,13 @@ class _ManualTabState extends State<_ManualTab> {
                   padding: const EdgeInsets.symmetric(
                       horizontal: 13, vertical: 8),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: cs.surface,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFFE8E8E8)),
+                    border: Border.all(color: cs.outlineVariant),
                   ),
                   child: Text(
                     '$emoji  $label',
-                    style: const TextStyle(
-                      fontSize: 13.5,
-                      color: Color(0xFF424242),
-                      fontWeight: FontWeight.w500,
-                    ),
+                    style: TextStyle(fontSize: 13.5, color: cs.onSurface, fontWeight: FontWeight.w500),
                   ),
                 ),
               );
@@ -857,12 +486,13 @@ class _FieldLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Text(
       text,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 13,
         fontWeight: FontWeight.w600,
-        color: Color(0xFF757575),
+        color: cs.onSurfaceVariant,
         letterSpacing: 0.3,
       ),
     );
@@ -878,39 +508,22 @@ class _BigStepBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: 50,
         height: 54,
         decoration: BoxDecoration(
-          color: enabled ? const Color(0xFFE0F7FA) : Colors.transparent,
+          color: enabled ? cs.primaryContainer : Colors.transparent,
           borderRadius: BorderRadius.circular(13),
         ),
         child: Icon(
           icon,
           size: 22,
-          color: enabled ? const Color(0xFF00ACC1) : const Color(0xFFCCCCCC),
+          color: enabled ? cs.primary : cs.outlineVariant,
         ),
       ),
-    );
-  }
-}
-
-class _IconBox extends StatelessWidget {
-  final IconData icon;
-  final Color color;
-  final Color bg;
-
-  const _IconBox({required this.icon, required this.color, required this.bg});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 76,
-      height: 76,
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
-      child: Icon(icon, size: 38, color: color),
     );
   }
 }

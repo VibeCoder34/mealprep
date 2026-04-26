@@ -4,6 +4,10 @@ class InventoryItem {
   final String emoji;
   final int quantity;
   final String unit;
+  /// Normalized key used for dedupe/upsert.
+  final String? itemKey;
+  /// Unit compatibility group: count/weight/volume/other.
+  final String? unitGroup;
 
   const InventoryItem({
     required this.id,
@@ -11,6 +15,8 @@ class InventoryItem {
     required this.emoji,
     required this.quantity,
     this.unit = 'adet',
+    this.itemKey,
+    this.unitGroup,
   });
 
   factory InventoryItem.fromJson(Map<String, Object?> json) {
@@ -20,6 +26,8 @@ class InventoryItem {
       emoji: (json['emoji'] as String?) ?? '🍽️',
       quantity: (json['quantity'] as num?)?.toInt() ?? 0,
       unit: (json['unit'] as String?) ?? 'adet',
+      itemKey: (json['itemKey'] as String?),
+      unitGroup: (json['unitGroup'] as String?),
     );
   }
 
@@ -30,6 +38,8 @@ class InventoryItem {
       'emoji': emoji,
       'quantity': quantity,
       'unit': unit,
+      if (itemKey != null) 'itemKey': itemKey,
+      if (unitGroup != null) 'unitGroup': unitGroup,
     };
   }
 
@@ -39,6 +49,8 @@ class InventoryItem {
     String? emoji,
     int? quantity,
     String? unit,
+    String? itemKey,
+    String? unitGroup,
   }) {
     return InventoryItem(
       id: id ?? this.id,
@@ -46,6 +58,8 @@ class InventoryItem {
       emoji: emoji ?? this.emoji,
       quantity: quantity ?? this.quantity,
       unit: unit ?? this.unit,
+      itemKey: itemKey ?? this.itemKey,
+      unitGroup: unitGroup ?? this.unitGroup,
     );
   }
 }
